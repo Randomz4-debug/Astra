@@ -15,6 +15,7 @@ class AstraAgentRuntime(context: Context) {
     private val providers = AiProviderRegistry(appContext)
     private val chats = AstraChatStore(appContext)
     private val workspace = AstraWorkspace(appContext)
+    private val taskManager = AstraTaskManager(appContext)
 
     suspend fun handle(input: String, localOnly: Boolean): String {
         val clean = input.trim()
@@ -22,11 +23,25 @@ class AstraAgentRuntime(context: Context) {
         val lower = clean.lowercase()
         val customResult = runCatching { customCommands.handle(clean) }.getOrNull()
         if (customResult != null) return customResult.message
+        if (lower.startsWith("run in background ") || lower.startsWith("start background task ") || lower.startsWith("run task in background ")) {
+            val prompt = clean.substringAfter("background", "").trim().removePrefix("task").trim()
+            if (prompt.isBlank()) return "Tell me what you want me to run in the background."
+            val id = taskManager.start(prompt)
+            return "Background task $id started. I will execute its steps in order."
+        }
+        if (lower == "list background tasks" || lower == "show background tasks" || lower == "tasks") {
+            val all = taskManager.all()
+            return if (all.isEmpty()) "No background tasks." else all.joinToString("; ") { "${it.id}: ${it.status} ${it.step}/${it.total}" }
+        }
+        if (lower.startsWith("stop background task ") || lower.startsWith("terminate background task ")) {
+            val id = clean.substringAfterLast(' ').trim()
+            return if (taskManager.stop(id)) "Stopped background task $id." else "Background task $id was not running."
+        }
         val chatId = currentChatId()
         chats.append(chatId, "user", clean)
         val answer = try {
             when {
-                lower == "stop" || lower == "cancel" || lower == "astra stop" -> { customCommands.stopAll(); "Stopped." }
+                lower == "stop" || lower == "cancel" || lower == "astra stop" -> { customCommands.stopAll(); taskManager.stopAll(); "Stopped." }
                 lower.startsWith("call ") || lower.startsWith("dial ") -> {
                     val target = clean.substringAfter(' ').trim()
                     commands.handle("call $target")?.message ?: "I could not start the call."
@@ -63,7 +78,6 @@ class AstraAgentRuntime(context: Context) {
         return answer
     }
 
-    /** Model call for automation loops without creating a visible chat message. */
     suspend fun automationReason(instruction: String): String = generateModelAnswer(currentChatId(), instruction, false)
 
     private suspend fun generateModelAnswer(chatId: String, clean: String, localOnly: Boolean): String {
