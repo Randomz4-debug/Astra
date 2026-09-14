@@ -1,27 +1,33 @@
 package com.astra.ai
 
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
-import android.graphics.Color
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.graphics.Color
 import android.service.voice.VoiceInteractionSession
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import java.util.Locale
 
+/** System-assistant voice session used when Astra is selected as Android's default assistant. */
 class AstraVoiceInteractionSession(private val sessionContext: Context) : VoiceInteractionSession(sessionContext) {
     private var recognizer: SpeechRecognizer? = null
     private var tts: TextToSpeech? = null
+    private var ttsReady = false
+    private var pendingSpeech: String? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private lateinit var status: TextView
     private lateinit var input: EditText
 
@@ -35,8 +41,19 @@ class AstraVoiceInteractionSession(private val sessionContext: Context) : VoiceI
         val send = Button(sessionContext).apply { text = "Send"; setOnClickListener { submit(input.text.toString()) } }
         row.addView(mic, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)); row.addView(send, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(title); root.addView(status); root.addView(input, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)); root.addView(row)
-        tts = TextToSpeech(sessionContext) { if (it == TextToSpeech.SUCCESS) tts?.language = Locale.getDefault() }
-        startListening(); return root
+
+        tts = TextToSpeech(sessionContext) { result ->
+            if (result == TextToSpeech.SUCCESS) {
+                ttsReady = true
+                tts?.language = Locale.getDefault()
+                pendingSpeech?.let { text -> pendingSpeech = null; speak(text) }
+            } else {
+                ttsReady = false
+                if (::status.isInitialized) status.text = "Speech output unavailable — check the phone's Text-to-speech engine."
+            }
+        }
+        startListening()
+        return root
     }
 
     private fun startListening() {
@@ -49,7 +66,7 @@ class AstraVoiceInteractionSession(private val sessionContext: Context) : VoiceI
                 override fun onRmsChanged(rmsdB: Float) {}
                 override fun onBufferReceived(buffer: ByteArray?) {}
                 override fun onEndOfSpeech() { status.text = "Thinking…" }
-                override fun onError(error: Int) { status.text = "Tap the microphone to try again" }
+                override fun onError(error: Int) { status.text = "Speech error ($error). Tap the microphone to try again." }
                 override fun onResults(results: Bundle?) { results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.takeIf { it.isNotBlank() }?.let { input.setText(it); submit(it) } }
                 override fun onPartialResults(partialResults: Bundle?) {}
                 override fun onEvent(eventType: Int, params: Bundle?) {}
@@ -61,14 +78,21 @@ class AstraVoiceInteractionSession(private val sessionContext: Context) : VoiceI
     private fun submit(text: String) {
         val clean = text.trim(); if (clean.isBlank()) return
         status.text = "Thinking…"
-        val runtime = AstraAgentRuntime(sessionContext)
-        Thread {
-            val answer = kotlinx.coroutines.runBlocking { runtime.handle(clean, false) }
-            Handler(Looper.getMainLooper()).post { status.text = "Astra"; tts?.speak(answer, TextToSpeech.QUEUE_FLUSH, null, "astra-assistant"); input.setText(answer) }
-        }.start()
+        scope.launch(Dispatchers.IO) {
+            val answer = runCatching { AstraAgentRuntime(sessionContext).handle(clean, false) }.getOrElse { "Astra error: ${it.message ?: "unknown error"}" }
+            launch(Dispatchers.Main) { status.text = "Astra"; input.setText(answer); speak(answer) }
+        }
+    }
+
+    private fun speak(text: String) {
+        if (text.isBlank()) return
+        if (!ttsReady) { pendingSpeech = text; return }
+        runCatching { tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "astra-assistant") }
     }
 
     override fun onShow(args: Bundle?, showFlags: Int) { super.onShow(args, showFlags); if (::status.isInitialized) startListening() }
 
-    override fun onDestroy() { recognizer?.destroy(); recognizer = null; tts?.shutdown(); tts = null; super.onDestroy() }
+    override fun onDestroy() {
+        recognizer?.destroy(); recognizer = null; tts?.stop(); tts?.shutdown(); tts = null; ttsReady = false; pendingSpeech = null; scope.cancel(); super.onDestroy()
+    }
 }
