@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Astra — Local AI</title>
+<style>
+:root{color-scheme:dark}body{margin:0;background:#070a10;color:#eaf2ff;font:15px system-ui,sans-serif}main{max-width:900px;margin:auto;padding:18px}.card{background:#101722;border:1px solid #223044;border-radius:18px;padding:16px;margin:12px 0}h1{margin:0 0 4px}small{color:#8fa0b8}#chat{min-height:55vh;overflow:auto}.msg{padding:11px 13px;border-radius:14px;margin:8px 0;white-space:pre-wrap}.u{background:#18314b;margin-left:12%}.a{background:#17201d;margin-right:12%}textarea{width:100%;box-sizing:border-box;background:#0a1018;color:white;border:1px solid #2c3d55;border-radius:12px;padding:12px;min-height:70px}button{border:0;border-radius:12px;padding:11px 16px;background:#5b8cff;color:white;font-weight:700;margin:5px 4px 0 0}button.secondary{background:#263449}.row{display:flex;gap:8px;flex-wrap:wrap}</style>
+</head><body><main>
+<div class="card"><h1>ASTRA</h1><small>Offline-first personal AI • local tools • multilingual • privacy focused</small></div>
+<div id="chat" class="card"></div>
+<div class="card"><textarea id="q" placeholder="Ask Astra anything or say an Android command..."></textarea><div class="row"><button onclick="send()">Send</button><button class="secondary" onclick="listen()">Listen</button><button class="secondary" onclick="stop()">Stop</button><button class="secondary" onclick="screenRead()">Read screen</button></div></div>
+<div class="card"><small id="status">Ready</small></div>
+<script>
+const chat=document.getElementById('chat'),q=document.getElementById('q'),status=document.getElementById('status');
+function add(t,c){let d=document.createElement('div');d.className='msg '+c;d.textContent=t;chat.appendChild(d);chat.scrollTop=chat.scrollHeight}
+function send(){let t=q.value.trim();if(!t)return;add(t,'u');q.value='';status.textContent='Thinking…';if(window.Astra&&Astra.ask){Astra.ask(t)}else{add('Astra bridge is unavailable. Open this page inside Astra.','a');status.textContent='Bridge unavailable'}}
+function onAstraResponse(t){add(t,'a');status.textContent='Ready'}
+function listen(){if(window.Astra&&Astra.listen)Astra.listen();else status.textContent='Voice bridge unavailable'}
+function stop(){if(window.Astra&&Astra.stop)Astra.stop();status.textContent='Stopped'}
+function screenRead(){if(window.Astra&&Astra.readScreen)Astra.readScreen();else status.textContent='Screen bridge unavailable'}
+</script></main></body></html>
