@@ -25,11 +25,25 @@ data class AstraUiState(
 class AstraViewModel(private val context: Context) : ViewModel() {
     private val runtime = AstraAgentRuntime(context)
     private val secure = SecureSettings(context)
-    private val _ui = MutableStateFlow(AstraUiState(cloudConfigured = secure.openAiApiKey() != null))
+    private val prefs = context.getSharedPreferences("astra_runtime", Context.MODE_PRIVATE)
+    private val _ui = MutableStateFlow(
+        AstraUiState(
+            localOnly = prefs.getBoolean("local_only", true),
+            background = prefs.getBoolean("background", false),
+            networkEnabled = !prefs.getBoolean("local_only", true),
+            cloudConfigured = secure.openAiApiKey() != null
+        )
+    )
     val ui: StateFlow<AstraUiState> = _ui
 
-    fun setLocalOnly(value: Boolean) { _ui.value = _ui.value.copy(localOnly = value, networkEnabled = !value) }
-    fun setBackground(value: Boolean) { _ui.value = _ui.value.copy(background = value) }
+    fun setLocalOnly(value: Boolean) {
+        prefs.edit().putBoolean("local_only", value).apply()
+        _ui.value = _ui.value.copy(localOnly = value, networkEnabled = !value)
+    }
+    fun setBackground(value: Boolean) {
+        prefs.edit().putBoolean("background", value).apply()
+        _ui.value = _ui.value.copy(background = value)
+    }
 
     fun setOpenAiApiKey(value: String) {
         secure.setOpenAiApiKey(value)
