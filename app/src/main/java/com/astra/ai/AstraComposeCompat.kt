@@ -6,8 +6,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.material3.TextButton
 
-/** Dependency-safe wrappers used by Astra's lightweight UI animation. */
+/** Dependency-safe wrappers used by Astra's lightweight UI. */
 @Composable
 fun rememberInfiniteTransition(label: String): InfiniteTransition = coreRememberInfiniteTransition(label)
 
@@ -18,3 +20,9 @@ fun InfiniteTransition.animateFloat(initialValue: Float, targetValue: Float, ani
 fun InfiniteTransition.animateFloat(initialValue: Float, targetValue: Double, animationSpec: Any, label: String): State<Float> = remember(label) { mutableFloatStateOf(initialValue) }
 
 fun sin(value: Float): Float = kotlin.math.sin(value.toDouble()).toFloat()
+
+/** Non-experimental compact drawer row used to keep the main screen stable across Material3 versions. */
+@Composable
+fun NavigationDrawerItem(label: @Composable () -> Unit, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    TextButton(onClick = onClick, modifier = modifier.fillMaxWidth()) { label() }
+}
