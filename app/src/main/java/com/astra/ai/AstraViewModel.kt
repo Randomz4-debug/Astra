@@ -18,21 +18,26 @@ data class AstraUiState(
     val background: Boolean = false,
     val notificationAccess: Boolean = false,
     val accessibilityAccess: Boolean = false,
-    val networkEnabled: Boolean = false
+    val networkEnabled: Boolean = false,
+    val cloudConfigured: Boolean = false
 )
 
 class AstraViewModel(private val context: Context) : ViewModel() {
-    private val engine: AiEngine = LocalAiEngine()
+    private val localEngine: AiEngine = LocalAiEngine()
+    private val cloudEngine: AiEngine = OpenAiResponsesEngine(context)
     private val commands = LocalCommandEngine(context)
     private val memory = MemoryManager(context)
-    private val _ui = MutableStateFlow(AstraUiState())
+    private val secure = SecureSettings(context)
+    private val _ui = MutableStateFlow(AstraUiState(cloudConfigured = secure.openAiApiKey() != null))
     val ui: StateFlow<AstraUiState> = _ui
 
-    fun setLocalOnly(value: Boolean) {
-        _ui.value = _ui.value.copy(localOnly = value, networkEnabled = !value)
-    }
-
+    fun setLocalOnly(value: Boolean) { _ui.value = _ui.value.copy(localOnly = value, networkEnabled = !value) }
     fun setBackground(value: Boolean) { _ui.value = _ui.value.copy(background = value) }
+
+    fun setOpenAiApiKey(value: String) {
+        secure.setOpenAiApiKey(value)
+        _ui.value = _ui.value.copy(cloudConfigured = value.isNotBlank())
+    }
 
     fun ask(text: String) {
         if (text.isBlank()) return
@@ -51,7 +56,7 @@ class AstraViewModel(private val context: Context) : ViewModel() {
                 val parts = body.split(" is ", limit = 2)
                 if (parts.size == 2) {
                     memory.remember(parts[0], parts[1])
-                    _ui.value = _ui.value.copy(state = AssistantState.SPEAKING, response = "I'll remember that.")
+                    _ui.value = _ui.value.copy(state = AssistantState.SPEAKING, response = "I'll remember that locally.")
                     return@launch
                 }
             }
@@ -67,17 +72,16 @@ class AstraViewModel(private val context: Context) : ViewModel() {
                 return@launch
             }
             if (lower == "delete all astra memory") {
-                _ui.value = _ui.value.copy(state = AssistantState.EXECUTING, response = "CONFIRMATION_REQUIRED: delete all local memory")
+                _ui.value = _ui.value.copy(state = AssistantState.EXECUTING, response = "Confirmation required before deleting all memory.")
                 return@launch
             }
 
-            val toolResult = commands.handle(clean)
-            if (toolResult != null) {
-                _ui.value = _ui.value.copy(state = AssistantState.EXECUTING, response = toolResult.message)
+            commands.handle(clean)?.let {
+                _ui.value = _ui.value.copy(state = AssistantState.EXECUTING, response = it.message)
                 return@launch
             }
 
-            val answer = engine.respond(clean)
+            val answer = if (_ui.value.localOnly) localEngine.respond(clean) else cloudEngine.respond(clean)
             _ui.value = _ui.value.copy(state = AssistantState.SPEAKING, response = answer)
         }
     }
