@@ -1,6 +1,7 @@
 package com.astra.ai
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,18 +15,23 @@ class AstraAccessibilityService : AccessibilityService() {
         fun current(): AstraAccessibilityService? = instance
     }
 
-    override fun onServiceConnected() { instance = this }
+    override fun onServiceConnected() {
+        instance = this
+        serviceInfo = serviceInfo.apply {
+            flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+        }
+    }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // Only observe the accessibility tree. No data is uploaded or persisted here.
         val root = rootInActiveWindow ?: return
-        _screenText.value = collectText(root).take(12000)
+        _screenText.value = collectText(root).take(16000)
     }
 
     override fun onInterrupt() {}
 
     override fun onDestroy() {
         if (instance === this) instance = null
+        _screenText.value = ""
         super.onDestroy()
     }
 
@@ -38,7 +44,7 @@ class AstraAccessibilityService : AccessibilityService() {
 
     fun typeText(text: String): Boolean {
         val root = rootInActiveWindow ?: return false
-        val focused = findFocusedEditable(root) ?: return false
+        val focused = findFocusedEditable(root) ?: findFirstEditable(root) ?: return false
         val args = android.os.Bundle().apply {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
         }
@@ -46,7 +52,6 @@ class AstraAccessibilityService : AccessibilityService() {
     }
 
     fun scrollForward(): Boolean = rootInActiveWindow?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD) == true
-
     fun globalBack(): Boolean = performGlobalAction(GLOBAL_ACTION_BACK)
     fun globalHome(): Boolean = performGlobalAction(GLOBAL_ACTION_HOME)
     fun globalRecents(): Boolean = performGlobalAction(GLOBAL_ACTION_RECENTS)
@@ -54,7 +59,8 @@ class AstraAccessibilityService : AccessibilityService() {
     private fun findText(node: AccessibilityNodeInfo?, wanted: String): AccessibilityNodeInfo? {
         if (node == null) return null
         val value = node.text?.toString().orEmpty()
-        if (value.equals(wanted, true) || value.contains(wanted, true)) return node
+        val desc = node.contentDescription?.toString().orEmpty()
+        if (value.equals(wanted, true) || value.contains(wanted, true) || desc.equals(wanted, true) || desc.contains(wanted, true)) return node
         for (i in 0 until node.childCount) findText(node.getChild(i), wanted)?.let { return it }
         return null
     }
@@ -63,6 +69,13 @@ class AstraAccessibilityService : AccessibilityService() {
         if (node == null) return null
         if (node.isFocused && node.isEditable) return node
         for (i in 0 until node.childCount) findFocusedEditable(node.getChild(i))?.let { return it }
+        return null
+    }
+
+    private fun findFirstEditable(node: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
+        if (node == null) return null
+        if (node.isEditable) return node
+        for (i in 0 until node.childCount) findFirstEditable(node.getChild(i))?.let { return it }
         return null
     }
 
