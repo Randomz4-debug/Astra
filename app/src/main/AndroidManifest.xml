@@ -11,17 +11,27 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS"/>
     <uses-permission android:name="android.permission.CALL_PHONE"/>
-    <queries><intent><action android:name="android.speech.RecognitionService"/></intent><intent><action android:name="android.intent.action.TTS_SERVICE"/></intent><intent><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent></queries>
+    <queries>
+        <intent><action android:name="android.speech.RecognitionService"/></intent>
+        <intent><action android:name="android.intent.action.TTS_SERVICE"/></intent>
+        <intent><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent>
+    </queries>
     <application android:theme="@style/Theme.Astra" android:label="@string/app_name" android:icon="@drawable/ic_astra" android:roundIcon="@drawable/ic_astra" android:allowBackup="false" android:supportsRtl="true" android:usesCleartextTraffic="true">
+        <activity android:name=".AstraChatActivity" android:exported="true" android:label="Astra">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
         <activity android:name=".AstraCameraActivity" android:exported="false" android:screenOrientation="portrait" android:label="Astra Camera"/>
         <activity android:name=".AstraCustomCommandsActivity" android:exported="false" android:label="Astra Custom Commands"/>
         <activity android:name=".AstraWebActivity" android:exported="false" android:label="Astra Web UI"/>
-        <activity android:name=".AstraMainActivity" android:exported="true" android:label="Astra"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>
+        <activity android:name=".AstraMainActivity" android:exported="false" android:label="Astra Advanced"/>
         <activity android:name=".MainActivity" android:exported="false" android:label="Astra Legacy"/>
         <service android:name=".AstraAccessibilityService" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" android:exported="false"><intent-filter><action android:name="android.accessibilityservice.AccessibilityService"/></intent-filter><meta-data android:name="android.accessibilityservice" android:resource="@xml/accessibility_service_config"/></service>
         <service android:name=".AstraNotificationListenerService" android:label="Astra Notification Access" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" android:exported="true"><intent-filter><action android:name="android.service.notification.NotificationListenerService"/></intent-filter></service>
         <service android:name=".AstraForegroundService" android:exported="false" android:foregroundServiceType="microphone|camera|mediaProjection"/>
         <service android:name=".AstraVoiceInteractionService" android:label="Astra Assistant" android:permission="android.permission.BIND_VOICE_INTERACTION" android:exported="true"><intent-filter><action android:name="android.service.voice.VoiceInteractionService"/></intent-filter><meta-data android:name="android.voice_interaction_service" android:resource="@xml/voice_interaction_service"/></service>
-        <service android:name=".AstraVoiceInteractionSessionService" android:label="Astra Voice Session" android:permission="android.permission.BIND_VOICE_INTERACTION" android:exported="false"/>
+        <service android:name=".AstraVoiceInteractionSessionService" android:label="Astra Voice Session" android:permission="android.permission.BIND_VOICE_INTERACTION" android:exported="true" android:process=":voice"/>
     </application>
 </manifest>
