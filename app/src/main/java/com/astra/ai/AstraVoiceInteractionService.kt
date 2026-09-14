@@ -1,19 +1,25 @@
 package com.astra.ai
 
-import android.content.Intent
 import android.os.Bundle
 import android.service.voice.VoiceInteractionService
+import android.service.voice.VoiceInteractionSession
 
-/** System voice-assistant entry point. When Astra is selected as the assistant, Android can invoke it from Keyguard. */
+/** System-facing entry point for Astra when Android has selected Astra as the assistant. */
 class AstraVoiceInteractionService : VoiceInteractionService() {
-    override fun onReady() { super.onReady() }
+    override fun onReady() {
+        super.onReady()
+    }
 
     override fun onLaunchVoiceAssistFromKeyguard() {
         super.onLaunchVoiceAssistFromKeyguard()
+        // VoiceInteractionService is one of Android's privileged background-to-UI launch paths.
+        // Show the real VoiceInteractionSession instead of starting a normal background service.
         runCatching {
-            val i = Intent(this, AstraForegroundService::class.java).apply { action = "ASTRA_KEYGUARD_ASSIST" }
-            if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(i) else startService(i)
+            showSession(Bundle().apply { putBoolean("astra_keyguard", true) }, VoiceInteractionSession.SHOW_WITH_ASSIST)
         }
-        showSession(Bundle(), 0)
+    }
+
+    override fun onShutdown() {
+        super.onShutdown()
     }
 }
