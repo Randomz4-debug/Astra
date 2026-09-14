@@ -9,11 +9,7 @@ import java.net.URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/**
- * Local AI gateway. It can talk to an Ollama/OpenAI-compatible service on loopback or
- * an explicitly configured private LAN address. It never sends local-only requests to
- * a public host.
- */
+/** Local AI gateway for Ollama and OpenAI-compatible local runtimes such as PocketLLM. */
 class LocalAiGateway(private val context: Context) {
     private val prefs = context.getSharedPreferences("astra_local_ai", Context.MODE_PRIVATE)
 
@@ -27,17 +23,26 @@ class LocalAiGateway(private val context: Context) {
         val base = endpoint()
         val uri = runCatching { URL(base) }.getOrElse { return@withContext "Invalid local AI endpoint." }
         if (!isAllowedHost(uri.host)) return@withContext "Local-only mode blocked a non-local AI endpoint."
-        val url = URL("$base/api/chat")
-        val connection = url.openConnection() as HttpURLConnection
+        val looksLikeOllama = uri.port == 11434 || base.contains("/ollama", true)
+        val path = if (looksLikeOllama) "/api/chat" else "/v1/chat/completions"
+        val connection = (URL(base + path).openConnection() as HttpURLConnection)
         connection.requestMethod = "POST"
         connection.connectTimeout = 4000
         connection.readTimeout = 120000
         connection.doOutput = true
         connection.setRequestProperty("Content-Type", "application/json")
-        val body = JSONObject().apply {
-            put("model", model())
-            put("stream", false)
-            put("messages", JSONArray().put(JSONObject().put("role", "user").put("content", prompt)))
+        val body = if (looksLikeOllama) {
+            JSONObject().apply {
+                put("model", model())
+                put("stream", false)
+                put("messages", JSONArray().put(JSONObject().put("role", "user").put("content", prompt)))
+            }
+        } else {
+            JSONObject().apply {
+                put("model", model())
+                put("stream", false)
+                put("messages", JSONArray().put(JSONObject().put("role", "user").put("content", prompt)))
+            }
         }.toString()
         connection.outputStream.use { it.write(body.toByteArray()) }
         if (connection.responseCode !in 200..299) return@withContext "Local AI returned HTTP ${connection.responseCode}."
@@ -45,6 +50,8 @@ class LocalAiGateway(private val context: Context) {
         val json = JSONObject(response)
         json.optJSONObject("message")?.optString("content")
             ?.takeIf { it.isNotBlank() }
+            ?: json.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")?.optString("content")
+                ?.takeIf { it.isNotBlank() }
             ?: json.optString("response").takeIf { it.isNotBlank() }
             ?: "Local AI returned an empty response."
     }
