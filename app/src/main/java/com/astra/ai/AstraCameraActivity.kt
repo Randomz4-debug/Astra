@@ -29,6 +29,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Astra-controlled camera: front/back switch, capture, visual-memory identification and Gallery hand-off. */
@@ -85,7 +86,8 @@ class AstraCameraActivity : ComponentActivity() {
     private fun identifyMemory(uri: Uri) {
         lifecycleScope.launch(Dispatchers.IO) {
             val bitmap = contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it) } ?: return@launch
-            val match = AstraVisualMemoryStore(this@AstraCameraActivity).identify(bitmap); bitmap.recycle()
+            val match = AstraVisualMemoryStore(this@AstraCameraActivity).identify(bitmap)
+            bitmap.recycle()
             withContext(Dispatchers.Main) { if (match != null) Toast.makeText(this@AstraCameraActivity, "I recognize ${match.name} (${match.category}).", Toast.LENGTH_LONG).show() }
         }
     }
