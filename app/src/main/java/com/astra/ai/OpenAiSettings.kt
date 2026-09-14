@@ -3,6 +3,7 @@ package com.astra.ai
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -15,18 +16,34 @@ class OpenAiSettings(context: Context) {
     fun apiKey(): String? = secure.openAiApiKey()
     fun hasApiKey(): Boolean = !apiKey().isNullOrBlank()
 
-    fun saveApiKey(value: String) {
-        secure.setOpenAiApiKey(value.trim())
-    }
-
-    fun clearApiKey() {
-        secure.setOpenAiApiKey("")
-    }
+    fun saveApiKey(value: String) { secure.setOpenAiApiKey(value.trim()) }
+    fun clearApiKey() { secure.setOpenAiApiKey("") }
 
     fun model(): String = prefs.getString("model", "gpt-5.6-luna") ?: "gpt-5.6-luna"
+    fun setModel(value: String) { prefs.edit().putString("model", value.trim().ifBlank { "gpt-5.6-luna" }).apply() }
 
-    fun setModel(value: String) {
-        prefs.edit().putString("model", value.trim().ifBlank { "gpt-5.6-luna" }).apply()
+    /** Discovers the models available to this API key. */
+    suspend fun discoverModels(): List<String> = withContext(Dispatchers.IO) {
+        val key = apiKey()?.takeIf { it.isNotBlank() } ?: return@withContext emptyList()
+        runCatching {
+            val connection = (URL("https://api.openai.com/v1/models").openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 10_000
+                readTimeout = 15_000
+                setRequestProperty("Authorization", "Bearer $key")
+                setRequestProperty("Accept", "application/json")
+            }
+            try {
+                if (connection.responseCode !in 200..299) return@runCatching emptyList<String>()
+                val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                val data = root.optJSONArray("data") ?: return@runCatching emptyList<String>()
+                buildList {
+                    for (i in 0 until data.length()) {
+                        data.optJSONObject(i)?.optString("id")?.takeIf { it.isNotBlank() }?.let(::add)
+                    }
+                }.distinct().sorted()
+            } finally { connection.disconnect() }
+        }.getOrDefault(emptyList())
     }
 
     suspend fun testConnection(): String = withContext(Dispatchers.IO) {
@@ -47,9 +64,7 @@ class OpenAiSettings(context: Context) {
                     429 -> "OpenAI responded with rate/billing limits. Check your API usage and billing."
                     else -> "OpenAI connection failed (${connection.responseCode})."
                 }
-            } finally {
-                connection.disconnect()
-            }
+            } finally { connection.disconnect() }
         }.getOrElse { "Connection failed: ${it.message ?: "network error"}" }
     }
 }
