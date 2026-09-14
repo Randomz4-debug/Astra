@@ -12,7 +12,6 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.concurrent.Executor
 
 class AstraCameraManager(private val context: Context) {
     private var imageCapture: ImageCapture? = null
@@ -23,9 +22,10 @@ class AstraCameraManager(private val context: Context) {
             try {
                 val provider = future.get()
                 val selector = if (front) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
-                imageCapture = ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build()
+                val capture = ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build()
+                imageCapture = capture
                 provider.unbindAll()
-                provider.bindToLifecycle(owner, selector, imageCapture)
+                provider.bindToLifecycle(owner, selector, capture)
                 onReady(true)
             } catch (_: Exception) { onReady(false) }
         }, ContextCompat.getMainExecutor(context))
@@ -37,8 +37,8 @@ class AstraCameraManager(private val context: Context) {
         val file = File(dir, "astra_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())}.jpg")
         val options = ImageCapture.OutputFileOptions.Builder(file).build()
         capture.takePicture(options, ContextCompat.getMainExecutor(context), object : ImageCapture.OnImageSavedCallback {
-            override fun onImageSaved(output: ImageCapture.OutputFileResults) = onResult(file)
-            override fun onError(exception: ImageCaptureException) = onResult(null)
+            override fun onImageSaved(output: ImageCapture.OutputFileResults) { onResult(file) }
+            override fun onError(exception: ImageCaptureException) { onResult(null) }
         })
     }
 }
