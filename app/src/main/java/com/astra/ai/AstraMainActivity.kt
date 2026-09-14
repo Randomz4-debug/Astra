@@ -72,7 +72,14 @@ class AstraMainActivity : ComponentActivity() {
     }
 
     fun isDefaultAssistant() = android.os.Build.VERSION.SDK_INT >= 29 && runCatching { getSystemService(RoleManager::class.java).isRoleHeld(RoleManager.ROLE_ASSISTANT) }.getOrDefault(false)
-    fun chooseDefaultAssistant() { if (android.os.Build.VERSION.SDK_INT < 29) return; val role = getSystemService(RoleManager::class.java); runCatching { if (role.isRoleAvailable(RoleManager.ROLE_ASSISTANT)) assistantRole.launch(role.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT)) else startActivity(Intent(Settings.ACTION_VOICE_INPUT_SETTINGS)) }.onFailure { runCatching { startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)) } }
+    fun chooseDefaultAssistant() {
+        if (android.os.Build.VERSION.SDK_INT < 29) return
+        val role = getSystemService(RoleManager::class.java)
+        runCatching {
+            if (role.isRoleAvailable(RoleManager.ROLE_ASSISTANT)) assistantRole.launch(role.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT))
+            else startActivity(Intent(Settings.ACTION_VOICE_INPUT_SETTINGS))
+        }.onFailure { runCatching { startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)) } }
+    }
     fun listen(lang: String, result: (String) -> Unit) = voice.listen(lang, result, {})
     fun stopListening() = voice.stop()
     fun speak(text: String) { if (text.isNotBlank()) voice.speak(text) }
@@ -119,6 +126,7 @@ private fun AstraWave() {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun AstraHome(a: AstraMainActivity, vm: AstraViewModel = viewModel(factory = AstraViewModel.factory(a))) {
     val ui by vm.ui.collectAsState()
@@ -147,11 +155,7 @@ private fun AstraHome(a: AstraMainActivity, vm: AstraViewModel = viewModel(facto
     val openAi = remember { OpenAiSettings(a) }
     val local = remember { LocalAiGateway(a) }
 
-    LaunchedEffect(Unit) {
-        endpoint = local.endpoint()
-        model = local.model()
-        openAiModel = openAi.model()
-    }
+    LaunchedEffect(Unit) { endpoint = local.endpoint(); model = local.model(); openAiModel = openAi.model() }
 
     fun discoverAllModels() {
         if (discoveringModels) return
@@ -164,28 +168,15 @@ private fun AstraHome(a: AstraMainActivity, vm: AstraViewModel = viewModel(facto
             withContext(Dispatchers.Main) {
                 localModels = localResult
                 openAiModels = cloudResult
-                // Automatically repair the 12434 -> 11434 configuration when Ollama is found there.
-                if (endpoint.contains(":12434") && localResult.isNotEmpty()) {
-                    endpoint = endpoint.replace(":12434", ":11434")
-                    local.configure(endpoint, model)
-                }
-                if (model.isBlank() && localResult.isNotEmpty()) {
-                    model = localResult.first()
-                    local.configure(endpoint, model)
-                }
+                if (endpoint.contains(":12434") && localResult.isNotEmpty()) { endpoint = endpoint.replace(":12434", ":11434"); local.configure(endpoint, model) }
+                if (model.isBlank() && localResult.isNotEmpty()) { model = localResult.first(); local.configure(endpoint, model) }
                 if (openAiModel.isBlank() && cloudResult.isNotEmpty()) openAiModel = cloudResult.first()
-                modelStatus = buildString {
-                    append(diagnosis)
-                    append("\nDetected ${localResult.size} local model(s)")
-                    if (openAi.hasApiKey()) append(" • ${cloudResult.size} OpenAI model(s)")
-                    else append(" • OpenAI key not configured")
-                }
+                modelStatus = buildString { append(diagnosis); append("\nDetected ${localResult.size} local model(s)"); if (openAi.hasApiKey()) append(" • ${cloudResult.size} OpenAI model(s)") else append(" • OpenAI key not configured") }
                 discoveringModels = false
             }
         }
     }
 
-    // Discover automatically whenever the user opens Settings, while retaining the manual button.
     LaunchedEffect(page) { if (page == 1) discoverAllModels() }
     LaunchedEffect(ui.state, ui.response) { if (ui.state == AssistantState.SPEAKING && ui.response.isNotBlank()) a.speak(ui.response) }
 
@@ -200,9 +191,7 @@ private fun AstraHome(a: AstraMainActivity, vm: AstraViewModel = viewModel(facto
         } }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad).padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) {
             item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(62.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Color(0xFFFF2146), Color(0xFF780015)))), contentAlignment = Alignment.Center) { Text("A", color = Color.White, style = MaterialTheme.typography.headlineLarge) }
-                    Spacer(Modifier.width(12.dp)); Column { Text("ASTRA", color = Color.White, style = MaterialTheme.typography.headlineMedium); Text(if (live) "LISTENING • LIVE" else ui.state.name, color = Color(0xFFB8BBC6)) }
+                Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(62.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Color(0xFFFF2146), Color(0xFF780015)))), contentAlignment = Alignment.Center) { Text("A", color = Color.White, style = MaterialTheme.typography.headlineLarge) }; Spacer(Modifier.width(12.dp)); Column { Text("ASTRA", color = Color.White, style = MaterialTheme.typography.headlineMedium); Text(if (live) "LISTENING • LIVE" else ui.state.name, color = Color(0xFFB8BBC6)) }
                 }
                 Spacer(Modifier.height(10.dp)); AstraWave(); Text("Voice activity ${rms.toInt()} dB", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
             }
@@ -210,15 +199,8 @@ private fun AstraHome(a: AstraMainActivity, vm: AstraViewModel = viewModel(facto
                 item {
                     Text("Ask Astra", color = Color.White, style = MaterialTheme.typography.titleMedium)
                     OutlinedTextField(message, { message = it }, Modifier.fillMaxWidth(), label = { Text("Message or command") }, shape = RoundedCornerShape(18.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button({ if (message.isNotBlank()) { vm.ask(message); message = "" } }, Modifier.weight(1f)) { Text("Send") }
-                        OutlinedButton({ if (live) a.stopListening() else a.listen("auto") { vm.ask(it) } }, Modifier.weight(1f)) { Text(if (live) "Stop" else "Listen") }
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton({ a.chooseFiles() }, Modifier.weight(1f)) { Text("Files") }
-                        OutlinedButton({ a.openCamera(false) }, Modifier.weight(1f)) { Text("Camera") }
-                        OutlinedButton({ if (message.isNotBlank()) { AstraTaskManager(a).start(message); info = "Background task started"; message = "" } }, Modifier.weight(1f)) { Text("Background") }
-                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { Button({ if (message.isNotBlank()) { vm.ask(message); message = "" } }, Modifier.weight(1f)) { Text("Send") }; OutlinedButton({ if (live) a.stopListening() else a.listen("auto") { vm.ask(it) } }, Modifier.weight(1f)) { Text(if (live) "Stop" else "Listen") } }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedButton({ a.chooseFiles() }, Modifier.weight(1f)) { Text("Files") }; OutlinedButton({ a.openCamera(false) }, Modifier.weight(1f)) { Text("Camera") }; OutlinedButton({ if (message.isNotBlank()) { AstraTaskManager(a).start(message); info = "Background task started"; message = "" } }, Modifier.weight(1f)) { Text("Background") } }
                     if (ui.response.isNotBlank()) Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF11131B))) { Text(ui.response, Modifier.padding(14.dp), color = Color.White) }
                 }
                 item { Text("AI MODE", color = Color.White, style = MaterialTheme.typography.titleMedium); Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("auto", "online", "offline").forEach { m -> FilterChip(mode == m, { mode = m; vm.setAiMode(m) }, label = { Text(m.uppercase()) }) } } }
@@ -238,21 +220,14 @@ private fun AstraHome(a: AstraMainActivity, vm: AstraViewModel = viewModel(facto
                     Text("Astra automatically checks the configured Ollama/OpenAI-compatible server and your OpenAI account. You can still enter a model manually.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                     OutlinedTextField(endpoint, { endpoint = it }, Modifier.fillMaxWidth(), label = { Text("Ollama / compatible URL") }, singleLine = true, supportingText = { Text("Ollama normally uses http://YOUR-PC-IP:11434") })
                     OutlinedTextField(model, { model = it }, Modifier.fillMaxWidth(), label = { Text("Model (manual or choose below)") }, singleLine = true)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button({ local.configure(endpoint, model); info = "Local AI settings saved." }, Modifier.weight(1f)) { Text("Save") }
-                        OutlinedButton({ discoverAllModels() }, Modifier.weight(1f), enabled = !discoveringModels) { Text(if (discoveringModels) "Detecting…" else "Discover Models") }
-                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Button({ local.configure(endpoint, model); info = "Local AI settings saved." }, Modifier.weight(1f)) { Text("Save") }; OutlinedButton({ discoverAllModels() }, Modifier.weight(1f), enabled = !discoveringModels) { Text(if (discoveringModels) "Detecting…" else "Discover Models") } }
                     if (localModels.isNotEmpty()) {
                         Text("LOCAL / OLLAMA MODELS", color = Color.White, style = MaterialTheme.typography.titleSmall)
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            localModels.forEach { item -> FilterChip(model == item, { model = item; local.configure(endpoint, item) }, label = { Text(item) }) }
-                        }
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { localModels.forEach { item -> FilterChip(model == item, { model = item; local.configure(endpoint, item) }, label = { Text(item) }) } }
                     }
                     if (openAiModels.isNotEmpty()) {
                         Text("OPENAI MODELS", color = Color.White, style = MaterialTheme.typography.titleSmall)
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            openAiModels.forEach { item -> FilterChip(openAiModel == item, { openAiModel = item; openAi.setModel(item) }, label = { Text(item) }) }
-                        }
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { openAiModels.forEach { item -> FilterChip(openAiModel == item, { openAiModel = item; openAi.setModel(item) }, label = { Text(item) }) } }
                     }
                     if (modelStatus.isNotBlank()) Text(modelStatus, color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
                     OutlinedButton({ a.lifecycleScope.launch { modelStatus = local.diagnose() } }, Modifier.fillMaxWidth()) { Text("Test Local AI Connection") }
@@ -261,15 +236,9 @@ private fun AstraHome(a: AstraMainActivity, vm: AstraViewModel = viewModel(facto
                     Text("OPENAI", color = Color.White, style = MaterialTheme.typography.titleMedium)
                     Text("Use OpenAI for Astra's online reasoning. The API key is stored locally using Android Keystore encryption.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                     OutlinedTextField(openAiKey, { openAiKey = it }, Modifier.fillMaxWidth(), label = { Text("OpenAI API key") }, singleLine = true, visualTransformation = if (showOpenAiKey) VisualTransformation.None else PasswordVisualTransformation())
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton({ showOpenAiKey = !showOpenAiKey }, Modifier.weight(1f)) { Text(if (showOpenAiKey) "Hide Key" else "Show Key") }
-                        Button({ openAi.saveApiKey(openAiKey); openAiKey = ""; openAiStatus = "API key saved securely on this device." }, Modifier.weight(1f)) { Text("Save Key") }
-                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedButton({ showOpenAiKey = !showOpenAiKey }, Modifier.weight(1f)) { Text(if (showOpenAiKey) "Hide Key" else "Show Key") }; Button({ openAi.saveApiKey(openAiKey); openAiKey = ""; openAiStatus = "API key saved securely on this device." }, Modifier.weight(1f)) { Text("Save Key") } }
                     OutlinedTextField(openAiModel, { openAiModel = it }, Modifier.fillMaxWidth(), label = { Text("OpenAI model") }, singleLine = true, supportingText = { Text("Choose a detected model or enter one manually.") })
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button({ openAi.setModel(openAiModel); openAiStatus = "Model saved: ${openAiModel.trim()}" }, Modifier.weight(1f)) { Text("Save Model") }
-                        OutlinedButton({ a.lifecycleScope.launch { openAiStatus = openAi.testConnection() } }, Modifier.weight(1f)) { Text("Test") }
-                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { Button({ openAi.setModel(openAiModel); openAiStatus = "Model saved: ${openAiModel.trim()}" }, Modifier.weight(1f)) { Text("Save Model") }; OutlinedButton({ a.lifecycleScope.launch { openAiStatus = openAi.testConnection() } }, Modifier.weight(1f)) { Text("Test") } }
                     OutlinedButton({ openAi.clearApiKey(); openAiKey = ""; openAiModels = emptyList(); openAiStatus = "OpenAI API key cleared from Astra." }, Modifier.fillMaxWidth()) { Text("Clear API Key") }
                     Text(if (openAi.hasApiKey()) "Status: API key configured" else "Status: API key not configured", color = if (openAi.hasApiKey()) Color(0xFF69E6A5) else Color(0xFFFF9AA9), style = MaterialTheme.typography.bodySmall)
                     if (openAiStatus.isNotBlank()) Text(openAiStatus, color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
