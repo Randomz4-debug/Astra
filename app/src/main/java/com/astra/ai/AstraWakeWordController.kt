@@ -25,7 +25,7 @@ class AstraWakeWordController(private val context: Context) : TextToSpeech.OnIni
 
     fun start(wakeWord: String = "astra", language: String = "auto", onCommand: (String) -> Unit) {
         if (!SpeechRecognizer.isRecognitionAvailable(context)) return
-        this.wakeWord = wakeWord.trim().lowercase() // blank means explicit always-listen mode
+        this.wakeWord = wakeWord.trim().lowercase()
         this.language = language.trim().ifBlank { "auto" }
         this.onCommand = onCommand
         running = true
@@ -40,14 +40,14 @@ class AstraWakeWordController(private val context: Context) : TextToSpeech.OnIni
         recognizer?.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {}
             override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(rmsdB: Float) { VoiceTelemetry.rms.value = rmsdB }
+            override fun onRmsChanged(rmsdB: Float) { VoiceTelemetry.setRms(rmsdB) }
             override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() { VoiceTelemetry.listening.value = false }
-            override fun onError(error: Int) { VoiceTelemetry.listening.value = false; scheduleRestart(350) }
+            override fun onEndOfSpeech() { VoiceTelemetry.setListening(false) }
+            override fun onError(error: Int) { VoiceTelemetry.setListening(false); scheduleRestart(350) }
             override fun onPartialResults(results: Bundle?) {}
             override fun onEvent(eventType: Int, params: Bundle?) {}
             override fun onResults(results: Bundle?) {
-                VoiceTelemetry.listening.value = false
+                VoiceTelemetry.setListening(false)
                 val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.trim().orEmpty()
                 if (text.isNotBlank()) process(text) else scheduleRestart(250)
             }
@@ -62,16 +62,13 @@ class AstraWakeWordController(private val context: Context) : TextToSpeech.OnIni
                 putExtra(RecognizerIntent.EXTRA_ENABLE_LANGUAGE_SWITCH, true)
             }
         }
-        VoiceTelemetry.listening.value = true
+        VoiceTelemetry.setListening(true)
         runCatching { recognizer?.startListening(intent) }.onFailure { scheduleRestart(500) }
     }
 
     private fun process(text: String) {
         val lower = text.lowercase()
-        if (wakeWord.isBlank()) {
-            submit(text)
-            return
-        }
+        if (wakeWord.isBlank()) { submit(text); return }
         if (!armed) {
             val index = lower.indexOf(wakeWord)
             if (index >= 0) {
@@ -85,7 +82,6 @@ class AstraWakeWordController(private val context: Context) : TextToSpeech.OnIni
     private fun submit(command: String) {
         armed = wakeWord.isBlank()
         onCommand(command)
-        // Do not immediately restart: TTS must finish first to avoid hearing Astra's own voice.
     }
 
     private fun speak(text: String) {
@@ -98,7 +94,7 @@ class AstraWakeWordController(private val context: Context) : TextToSpeech.OnIni
     fun speakResponse(text: String, language: String = this.language) {
         this.language = language
         recognizer?.cancel()
-        VoiceTelemetry.listening.value = false
+        VoiceTelemetry.setListening(false)
         speak(text)
         scheduleRestart((text.length.coerceAtMost(160) * 28L).coerceIn(900L, 5000L))
     }
@@ -112,7 +108,7 @@ class AstraWakeWordController(private val context: Context) : TextToSpeech.OnIni
         recognizer?.cancel()
         recognizer?.destroy()
         recognizer = null
-        VoiceTelemetry.listening.value = false
+        VoiceTelemetry.setListening(false)
         tts?.stop()
     }
 
