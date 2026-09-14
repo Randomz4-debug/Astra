@@ -17,11 +17,22 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    flavorDimensions += "network"
+    productFlavors {
+        create("local") {
+            dimension = "network"
+            versionNameSuffix = "-local"
+        }
+        create("cloud") {
+            dimension = "network"
+            versionNameSuffix = "-cloud"
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
     buildTypes {
