@@ -21,10 +21,7 @@ class AstraChatStore(context: Context) {
     private fun write(root: JSONObject) = synchronized(lock) {
         val tmp = File(file.parentFile, "astra_chats.json.tmp")
         tmp.writeText(root.toString())
-        if (!tmp.renameTo(file)) {
-            file.writeText(root.toString())
-            tmp.delete()
-        }
+        if (!tmp.renameTo(file)) { file.writeText(root.toString()); tmp.delete() }
     }
 
     fun ensureChat(id: String? = null, title: String = "New chat"): Chat = synchronized(lock) {
@@ -73,23 +70,30 @@ class AstraChatStore(context: Context) {
         synchronized(lock) {
             val root = read()
             val chats = root.optJSONArray("chats") ?: JSONArray().also { root.put("chats", it) }
-            val chat = findChat(chats, chatId) ?: run {
+            var chatObj: JSONObject? = null
+            for (i in 0 until chats.length()) {
+                val o = chats.optJSONObject(i) ?: continue
+                if (o.optString("id") == chatId) { chatObj = o; break }
+            }
+            if (chatObj == null) {
                 val now = System.currentTimeMillis()
-                val created = JSONObject().put("id", chatId).put("title", "New chat").put("createdAt", now).put("updatedAt", now)
-                chats.put(created)
-                created
+                chatObj = JSONObject().put("id", chatId).put("title", "New chat").put("createdAt", now).put("updatedAt", now)
+                chats.put(chatObj)
             }
             val messages = root.optJSONArray("messages") ?: JSONArray().also { root.put("messages", it) }
             messages.put(JSONObject().put("id", UUID.randomUUID().toString()).put("chatId", chatId).put("role", role).put("text", text).put("timestamp", timestamp))
-            chat.put("updatedAt", timestamp)
-            if (role == "user" && chat.optString("title") == "New chat") chat.put("title", text.take(48).replace("\n", " "))
+            chatObj?.put("updatedAt", timestamp)
+            if (role == "user" && chatObj?.optString("title") == "New chat") chatObj?.put("title", text.take(48).replace("\n", " "))
             write(root)
         }
     }
 
     fun rename(chatId: String, title: String) = synchronized(lock) {
         val root = read(); val chats = root.optJSONArray("chats") ?: return@synchronized
-        findChat(chats, chatId)?.put("title", title.trim().ifBlank { "New chat" })
+        for (i in 0 until chats.length()) {
+            val o = chats.optJSONObject(i) ?: continue
+            if (o.optString("id") == chatId) { o.put("title", title.trim().ifBlank { "New chat" }); break }
+        }
         write(root)
     }
 
@@ -97,11 +101,17 @@ class AstraChatStore(context: Context) {
         val root = read()
         val chats = root.optJSONArray("chats") ?: JSONArray()
         val keptChats = JSONArray()
-        for (i in 0 until chats.length()) if (chats.optJSONObject(i)?.optString("id") != chatId) keptChats.put(chats.opt(i))
+        for (i in 0 until chats.length()) {
+            val o = chats.optJSONObject(i) ?: continue
+            if (o.optString("id") != chatId) keptChats.put(o)
+        }
         root.put("chats", keptChats)
         val messages = root.optJSONArray("messages") ?: JSONArray()
         val keptMessages = JSONArray()
-        for (i in 0 until messages.length()) if (messages.optJSONObject(i)?.optString("chatId") != chatId) keptMessages.put(messages.opt(i))
+        for (i in 0 until messages.length()) {
+            val o = messages.optJSONObject(i) ?: continue
+            if (o.optString("chatId") != chatId) keptMessages.put(o)
+        }
         root.put("messages", keptMessages)
         write(root)
     }
