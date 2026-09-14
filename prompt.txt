@@ -1,0 +1,1058 @@
+BUILD A COMPLETE ANDROID AI ASSISTANT CALLED "ASTRA"
+
+You are an expert Android engineer, Kotlin developer, AI-agent engineer, Android accessibility engineer, voice-interface designer, and local-AI engineer.
+
+Build a complete production-quality Android application called Astra.
+
+TARGET DEVICE
+- Primary target: POCO M5 running Android.
+- Optimize for limited RAM, CPU, battery, and Xiaomi/POCO background-process behavior.
+- Use Kotlin and modern Android/Jetpack architecture.
+- Produce a complete buildable Android Studio project, not pseudocode.
+
+CORE GOAL
+
+Create a personal AI assistant combining:
+- ChatGPT-style live voice interaction
+- Custom wake word such as "Astra"
+- Local/offline AI operation
+- Optional OpenAI/ChatGPT realtime voice
+- Background assistant operation
+- Screen understanding
+- Camera/vision
+- Android app launching and UI automation
+- Notifications
+- Messaging assistance
+- Phone-call assistance where Android permits
+- Custom commands and routines
+- Local memory
+- User-controlled privacy settings
+
+PRIVACY-FIRST REQUIREMENT
+
+Astra must support a strict LOCAL-ONLY mode.
+
+In Local-only mode:
+- No cloud AI.
+- No OpenAI requests.
+- No analytics.
+- No telemetry.
+- No Firebase.
+- No remote logging.
+- No uploading microphone audio.
+- No uploading camera frames.
+- No uploading screenshots.
+- No uploading notification/message content.
+- No cloud storage.
+- Keep supported processing on-device.
+- Do not silently fall back to the Internet.
+
+If technically feasible for the selected build variant, omit INTERNET permission from a Local-only build. Otherwise provide a build/configuration that has no network client and clearly shows network access disabled.
+
+The application must never secretly record audio, secretly activate the camera, secretly capture the screen, or bypass Android security/privacy protections.
+
+AI PROVIDER MODES
+
+Implement:
+
+1. LOCAL MODE
+Everything possible happens on the phone:
+Wake word -> local STT -> local command/intent engine -> local LLM when needed -> local vision/OCR -> local tool execution -> local TTS.
+
+2. OPENAI / CHATGPT MODE
+Optional and explicitly enabled by the user.
+Use the current official OpenAI realtime API appropriate for live, full-duplex voice.
+Do not copy/extract the ChatGPT Android app or proprietary assets.
+Do not hard-code API keys into the APK.
+Use secure session/ephemeral credential handling where appropriate.
+Clearly tell the user that this mode requires Internet access.
+Keep device-control tools local: the model requests a tool, Astra validates permission/confirmation, and Astra executes it.
+
+3. AUTOMATIC MODE
+Prefer local deterministic commands and local AI. Use OpenAI only when the user explicitly permits it and the feature requires it.
+
+AI PROVIDER ABSTRACTION
+
+Create interfaces such as:
+
+interface AiEngine
+interface SpeechEngine
+interface TtsEngine
+interface WakeWordEngine
+interface VisionEngine
+
+Implement provider-specific classes such as:
+- LocalAiEngine
+- OpenAiRealtimeEngine
+- LocalSpeechEngine
+- OpenAiSpeechEngine if needed
+- LocalTtsEngine
+- OpenAiTtsEngine if appropriate
+- LocalVisionEngine
+- OpenAiVisionEngine
+- LocalWakeWordEngine
+
+Do not tightly couple the application to one model.
+
+WAKE WORD
+
+Default wake word:
+"Astra"
+
+Support configurable custom wake words:
+- Astra
+- Hey Astra
+- Computer
+- Jarvis
+- Friday
+- custom user phrase
+
+Wake-word recognition should be local and lightweight.
+Do not continuously send microphone audio to a server.
+
+VOICE UI
+
+Build an original UI inspired by the interaction pattern of ChatGPT voice mode without copying proprietary ChatGPT branding/assets.
+
+When listening, show a bottom panel similar in concept to:
+
+Astra
+Listening...
+animated waveform
+cancel button
+
+When thinking:
+Astra
+Thinking...
+animated indicator
+
+When speaking:
+Astra
+Speaking...
+animated waveform
+
+The UI must:
+- animate smoothly
+- react to microphone volume
+- show live transcription when available
+- show responses
+- show current action
+- minimize
+- expand
+- dismiss
+- appear over the current app when Android permits and the user has enabled the necessary overlay capability
+- work as a normal full-screen UI when overlays are disabled
+
+Settings:
+Voice UI:
+- Show when Astra activates
+- Always visible
+- Never show UI
+
+BACKGROUND OPERATION
+
+Provide a user-controlled:
+Background Assistant: ON/OFF
+
+Use Android foreground services correctly.
+Use the correct foreground-service types and permissions for microphone/camera functionality.
+Do not bypass Android background-start restrictions.
+
+Astra should remain available while the user uses other apps when Android permits.
+
+SCREEN-OFF OPERATION
+
+Provide:
+Screen-off assistant: ON/OFF
+
+When Android permits:
+screen off -> supported wake mechanism -> Astra listens -> processes -> speaks.
+
+Do not claim unrestricted screen capture/control while locked or screen-off.
+Gracefully handle Android restrictions.
+
+ACCESSIBILITY SERVICE
+
+Create an optional:
+AstraAccessibilityService
+
+The user must explicitly enable it in Android Accessibility settings.
+
+Use it only for legitimate owner-directed automation:
+- inspect accessible UI nodes
+- read accessible text
+- locate buttons
+- click supported controls
+- scroll
+- swipe
+- type text where supported
+- back
+- home
+- recents
+- supported global actions
+
+Do not use it to bypass security controls, authentication, permissions, protected content, or another app's security boundaries.
+
+SCREEN UNDERSTANDING
+
+Create a ScreenUnderstanding subsystem combining:
+- Accessibility UI tree
+- Android MediaProjection screenshots
+- OCR
+- Local vision model
+
+Commands:
+- "What is on my screen?"
+- "Read this screen."
+- "Explain this error."
+- "Find the blue button."
+- "Tap the login button."
+- "Scroll down."
+- "What's wrong with this page?"
+
+Prefer:
+1. Accessibility tree when sufficient
+2. OCR when sufficient
+3. Screenshot/vision only when needed
+
+Do not continuously capture/analyze the screen unless the user explicitly enables continuous screen understanding.
+
+SCREEN CAPTURE
+
+Use Android MediaProjection correctly.
+Ask the user for authorization.
+Never silently capture the screen.
+Show an obvious active status.
+Keep captures local in Local mode.
+
+CAMERA
+
+Support:
+- front camera
+- rear camera
+- flashlight/torch where supported
+- still photos
+- optional short vision sessions
+
+Commands:
+- "Astra, look at this."
+- "What am I looking at?"
+- "Describe this."
+- "Read this."
+- "What is this object?"
+- "Take a photo."
+- "Use the front camera."
+- "Use the rear camera."
+
+Never secretly activate the camera.
+Follow Android camera privacy indicators and permissions.
+Use permitted foreground-service behavior for camera use.
+
+LOCAL VISION
+
+Create a replaceable VisionEngine.
+Provide LocalVisionEngine and optional OpenAIVisionEngine.
+Choose an efficient local model suitable for POCO M5.
+Avoid continuously running a large model.
+Load/unload or otherwise manage models to control RAM and heat.
+
+SPEECH-TO-TEXT
+
+Create SpeechEngine with:
+- LocalSpeechEngine
+- optional OpenAI speech/realtime implementation
+
+Support:
+- partial results
+- final results
+- silence
+- timeouts
+- noisy audio
+- interruption
+- cancellation
+- language selection
+
+TEXT-TO-SPEECH
+
+Create TtsEngine with:
+- LocalTtsEngine
+- optional OpenAI voice implementation
+
+Support:
+- voice selection
+- language
+- speed
+- pitch
+- volume
+- interruption
+
+Astra must stop speaking promptly when the user starts talking.
+
+FULL-DUPLEX CONVERSATION
+
+Implement:
+ConversationSession
+
+States:
+IDLE
+WAKE_DETECTED
+LISTENING
+THINKING
+EXECUTING
+SPEAKING
+INTERRUPTED
+ENDING
+
+During an active conversation, do not require the user to repeat the wake word after every sentence.
+
+LOCAL COMMAND ENGINE
+
+Do not send every command to an LLM.
+
+Use deterministic intents first:
+- device command
+- app command
+- communication command
+- media command
+- screen command
+- camera command
+- automation command
+- general question
+
+Use the local LLM only when reasoning/language understanding is actually needed.
+
+DEVICE TOOLS
+
+Create a secure tool system with controlled tools such as:
+
+openApp(packageName)
+goHome()
+goBack()
+openRecents()
+tap(x, y)
+swipe(x1, y1, x2, y2)
+typeText(text)
+readScreen()
+captureScreen()
+takePhoto()
+setVolume(level)
+setBrightness(level)
+toggleTorch()
+playMedia()
+pauseMedia()
+nextTrack()
+previousTrack()
+
+Only implement tools Android actually permits.
+Do not use hidden/private APIs.
+Do not give the AI unrestricted shell/root/ADB access.
+
+TOOL ROUTER
+
+Use:
+
+AI
+-> Tool Call
+-> Astra Tool Router
+-> Permission Check
+-> Confirmation if required
+-> Tool Executor
+-> Result
+-> AI
+
+Tool definitions must include:
+- name
+- description
+- arguments
+- required permission
+- confirmation requirement
+- executor
+
+Require confirmation by default for:
+- sending messages
+- making calls
+- deleting data
+- uninstalling apps
+- purchases
+- account/security changes
+- destructive actions
+
+APP CONTROL
+
+Create AppManager.
+
+Discover launchable installed apps dynamically.
+Resolve natural language names to package names.
+
+Examples:
+- "Open YouTube."
+- "Open WhatsApp."
+- "Launch Spotify."
+- "Open Settings."
+
+Do not hard-code one user's installed application list.
+
+CUSTOM COMMANDS
+
+Allow user-defined commands.
+
+Example:
+"Gaming mode"
+
+Actions:
+- configure supported device settings
+- set brightness
+- set volume
+- launch selected game
+
+Example:
+"I'm home"
+
+Actions:
+- open selected music app
+- set selected volume
+- launch selected application
+
+Store custom commands locally.
+
+AUTOMATIONS
+
+Create AutomationManager.
+
+Support user-created routines:
+WHEN voice phrase/event happens
+DO a sequence of permitted Astra tools.
+
+Do not execute dangerous/destructive actions without confirmation unless the user explicitly configures a safe exception.
+
+NOTIFICATIONS
+
+Create optional:
+AstraNotificationListenerService
+
+Only active after explicit user authorization.
+
+Examples:
+- "Read my notifications."
+- "Did I receive any messages?"
+- "Read my latest WhatsApp message."
+
+Keep notification processing local in Local mode.
+
+MESSAGING
+
+Support owner-directed messaging assistance using Android intents/accessibility where permitted.
+
+Examples:
+- compose a message
+- open a conversation
+- type message text
+- ask for confirmation before sending
+
+Do not silently send messages.
+
+PHONE CALLS
+
+Implement only capabilities Android and the selected permissions allow.
+
+Examples:
+- initiate a call through the appropriate Android mechanism
+- show a call UI when required
+- provide call-related assistance where APIs permit
+
+Do not secretly record or intercept third-party call audio.
+Do not bypass Android telephony restrictions.
+
+LIVE COMMUNICATION
+
+Astra may assist the user during live communication only where Android APIs and user-granted access allow it.
+
+It may:
+- show information to the user
+- help compose replies
+- provide notifications
+- interact with accessible UI when explicitly directed
+
+Do not claim unrestricted ability to listen to or speak inside third-party encrypted calls unless Android actually provides the required APIs.
+
+STOP/INTERRUPT
+
+Provide global user-controlled stop behavior.
+
+User can say:
+"Astra stop"
+
+or use an obvious stop button.
+
+MEMORY
+
+Create optional local memory.
+
+Examples:
+- "Remember that I call this app X."
+- "What do you remember?"
+- "Forget that."
+- "Delete all Astra memory."
+
+Keep memory local.
+Never upload it automatically.
+
+LOCAL STORAGE
+
+Use appropriate Android local storage/database mechanisms.
+
+Store locally:
+- settings
+- custom commands
+- automations
+- conversation history if enabled
+- app mappings
+- permission state
+- local memory
+
+Do not store raw microphone/camera data unless the user explicitly enables recording.
+
+PRIVACY CENTER
+
+Create a dashboard showing:
+
+MICROPHONE
+Active/Disabled
+
+CAMERA
+Active/Disabled
+
+SCREEN ACCESS
+Active/Disabled
+
+ACCESSIBILITY
+Active/Disabled
+
+NOTIFICATION ACCESS
+Active/Disabled
+
+NETWORK
+Disabled / Enabled for OpenAI mode
+
+AI:
+Local / OpenAI
+
+Show clearly whether data can leave the device.
+
+LOCAL-ONLY SWITCH
+
+Create:
+LOCAL ONLY MODE
+
+When enabled:
+- cloud AI disabled
+- OpenAI disabled
+- analytics disabled
+- telemetry disabled
+- network-based speech disabled
+- cloud vision disabled
+- cloud storage disabled
+
+No silent fallback.
+
+SETTINGS
+
+Assistant:
+- Assistant name
+- Wake word
+- Background mode
+- Screen-off mode
+- Auto-start where permitted
+- Conversation timeout
+
+Voice:
+- Voice
+- Language
+- Speed
+- Pitch
+- Full duplex
+- Interrupt while speaking
+
+AI:
+- Provider
+- Local model
+- OpenAI mode
+- secure API/session configuration
+
+Vision:
+- Screen understanding
+- Camera
+- OCR
+- Continuous vision
+
+Automation:
+- Accessibility
+- Notifications
+- App control
+- Confirmation policy
+- Custom commands
+- Automations
+
+Privacy:
+- Microphone
+- Camera
+- Screen capture
+- Network
+- Data retention
+- Conversation history
+
+SECURITY
+
+Never implement:
+- hidden recording
+- hidden camera activation
+- credential theft
+- password extraction
+- bypassing Android security
+- bypassing app authentication
+- intercepting encrypted communications
+- covert surveillance
+- unauthorized device access
+
+Never let an AI model directly execute arbitrary shell commands.
+
+POCO/XIAOMI OPTIMIZATION
+
+Target POCO M5.
+
+Optimize:
+- low RAM
+- low CPU
+- low battery usage
+- thermal behavior
+- background survival
+- startup time
+- model memory
+
+Onboarding should explain, where applicable:
+1. microphone permission
+2. camera permission
+3. notification permission
+4. Accessibility permission
+5. notification access
+6. screen capture permission
+7. battery optimization setting
+8. autostart/background settings where available
+
+Do not assume every MIUI/HyperOS version has identical settings.
+Detect manufacturer/version and show appropriate guidance.
+
+BOOT/RESTART
+
+Support restoring Astra availability after reboot where Android permits.
+Follow modern Android restrictions.
+Do not attempt prohibited background microphone/camera startup.
+
+NETWORK DESIGN
+
+Network access must be explicit.
+Local mode must not silently use the network.
+
+For OpenAI mode:
+- use secure transport
+- do not hard-code long-lived secrets
+- expose connection status
+- allow disconnecting OpenAI
+- clearly indicate that audio/data required for the selected cloud feature leaves the phone
+
+ARCHITECTURE
+
+Use a clean modular structure such as:
+
+app/
+  ui/
+  assistant/
+  voice/
+  wakeword/
+  ai/
+    local/
+    openai/
+  vision/
+  screen/
+  camera/
+  accessibility/
+  notifications/
+  calls/
+  apps/
+  tools/
+  automation/
+  privacy/
+  storage/
+  services/
+
+Use Kotlin.
+Use coroutines and Flow appropriately.
+Use Jetpack components where appropriate.
+Avoid unnecessary dependencies.
+
+SUGGESTED CORE CLASSES
+
+AssistantController
+ConversationSession
+WakeWordManager
+SpeechManager
+TtsManager
+AiManager
+ToolRouter
+PermissionManager
+ScreenUnderstandingManager
+CameraManager
+AppManager
+NotificationManager
+CallManager
+AutomationManager
+MemoryManager
+PrivacyManager
+BackgroundService
+
+APP LIFECYCLE
+
+Handle:
+- app foreground/background
+- service lifecycle
+- permission revocation
+- microphone unavailable
+- camera unavailable
+- TTS unavailable
+- local model missing
+- OpenAI unavailable
+- network loss
+- Accessibility disabled
+- notification access disabled
+- screen capture permission revoked
+- another app missing
+
+Never crash.
+Provide useful recovery instructions.
+
+ERROR EXAMPLE:
+"Astra needs Accessibility access to control this screen."
+
+LOGGING
+
+Create local developer diagnostics with categories:
+WAKEWORD
+VOICE
+AI
+VISION
+SCREEN
+ACCESSIBILITY
+TOOLS
+AUTOMATION
+CALLS
+NOTIFICATIONS
+ERROR
+
+Do not log by default:
+- passwords
+- API keys
+- raw audio
+- raw camera frames
+- sensitive message content
+
+Developer Mode can show diagnostics.
+
+UI DESIGN
+
+Use an original modern dark interface:
+- minimal
+- futuristic
+- smooth
+- soft animations
+- glass-like surfaces
+- large voice indicator
+
+Main screen:
+ASTRA
+status
+voice button
+vision button
+settings
+
+Bottom voice panel:
+- compact
+- nonintrusive
+- expandable
+- dismissible
+
+Do not copy ChatGPT's exact branding or proprietary assets.
+
+COMMAND EXAMPLES
+
+Support natural commands such as:
+
+"Astra."
+"Open YouTube."
+"Open WhatsApp."
+"Read my notifications."
+"What is on my screen?"
+"Read this screen."
+"Explain this error."
+"Look at this."
+"What am I looking at?"
+"Take a photo."
+"Turn on the flashlight."
+"Go back."
+"Go home."
+"Scroll down."
+"Tap the blue button."
+"Type hello."
+"Play music."
+"Pause."
+"Next song."
+"Call Dad."
+"Message Rahul that I'm coming."
+"Create a Gaming Mode command."
+"Stop."
+"Go offline."
+"Use ChatGPT."
+
+TESTING
+
+Create unit tests for:
+- wake-word state
+- intent classification
+- command parsing
+- tool routing
+- confirmation system
+- automation execution
+- AI provider switching
+- privacy mode
+
+Create Android tests where practical for:
+- service startup
+- permissions
+- accessibility
+- UI states
+
+Test failure conditions.
+
+OFFLINE TEST
+
+1. Disable Wi-Fi.
+2. Disable mobile data.
+3. Launch Astra.
+4. Say "Astra."
+5. Give a supported local command.
+6. Astra responds.
+7. Open another app.
+8. Say "Astra."
+9. Astra responds if Android permits the selected background configuration.
+10. Verify no network request is made.
+
+OPENAI TEST
+
+1. Enable OpenAI mode explicitly.
+2. Internet ON.
+3. Start Astra.
+4. Say "Astra."
+5. Establish realtime session.
+6. Speak naturally.
+7. Interrupt Astra.
+8. Ask a question.
+9. Trigger a tool.
+10. Astra validates and executes the tool locally.
+11. Astra speaks the result.
+
+SCREEN TEST
+
+1. Open Settings or another normal app.
+2. Activate Astra.
+3. Say "What is on my screen?"
+4. Capture only after authorized screen-capture permission.
+5. Analyze locally in Local mode.
+6. Answer.
+
+CAMERA TEST
+
+1. Activate Astra.
+2. Say "Astra, look at this."
+3. Request camera permission if needed.
+4. Capture.
+5. Analyze locally in Local mode.
+6. Speak answer.
+
+BACKGROUND TEST
+
+1. Start Astra.
+2. Leave Astra.
+3. Open another application.
+4. Screen off.
+5. Use supported wake/background mechanism.
+6. Speak.
+7. Astra responds if permitted by Android.
+
+PRIVACY TEST
+
+Local mode:
+- no OpenAI request
+- no analytics
+- no telemetry
+- no cloud storage
+- no screen upload
+- no camera upload
+- no microphone upload
+
+BUILD REQUIREMENTS
+
+Generate a COMPLETE BUILDABLE Android Studio project.
+
+Do not provide pseudocode.
+
+Do not leave:
+TODO
+IMPLEMENT_THIS
+YOUR_CODE_HERE
+
+Every required Kotlin file must be complete.
+Every XML/resource file must be complete.
+Every Gradle file must be complete.
+Every manifest entry must be complete.
+
+Use a consistent package such as:
+com.astra.ai
+
+Include filename labels in documentation and explanations.
+
+Provide:
+- settings.gradle.kts
+- root build.gradle.kts
+- gradle.properties
+- app/build.gradle.kts
+- AndroidManifest.xml
+- all Kotlin source files
+- all resources
+- themes
+- strings
+- drawables/icons/placeholders
+- services
+- receivers
+- database/storage
+- tests
+- README
+- build instructions
+
+Before declaring completion, inspect the entire project for:
+- compilation errors
+- missing imports
+- missing resources
+- package mismatches
+- manifest errors
+- incorrect permissions
+- lifecycle problems
+- foreground-service restrictions
+- null pointer issues
+- coroutine leaks
+- memory leaks
+- battery problems
+- model-loading problems
+- OpenAI integration problems
+- provider switching problems
+- crashes
+
+Do not say "this should work."
+Actually build/verify the project if the environment permits.
+
+IMPLEMENTATION ORDER
+
+Build and verify in stages:
+
+Stage 1:
+Astra core + UI + settings
+
+Stage 2:
+Local wake word + local STT/TTS
+
+Stage 3:
+Foreground/background assistant service
+
+Stage 4:
+Accessibility + Android device/app control
+
+Stage 5:
+Screen capture + OCR + local screen understanding
+
+Stage 6:
+Camera + local vision
+
+Stage 7:
+Custom commands + automations
+
+Stage 8:
+Notifications + messaging assistance
+
+Stage 9:
+Phone-call support where Android permits
+
+Stage 10:
+OpenAI realtime integration
+
+Stage 11:
+POCO/Xiaomi optimization
+
+Stage 12:
+Full test and release build
+
+Do not implement a fragile giant prototype in one step. Keep every stage compiling.
+
+FINAL PRODUCT GOAL
+
+The finished Astra application should provide:
+
+Custom wake word
++
+Natural voice conversation
++
+ChatGPT/OpenAI realtime option
++
+Local/offline AI option
++
+ChatGPT-style original bottom voice UI
++
+Background operation where Android permits
++
+Screen-off voice operation where Android permits
++
+Screen understanding
++
+OCR
++
+Camera/vision
++
+Accessibility-based UI automation
++
+App launching
++
+Notification understanding
++
+Messaging assistance
++
+Phone-call assistance where Android permits
++
+Custom commands
++
+Automations
++
+Local memory
++
+Strong privacy controls
+
+while respecting Android, application, and user privacy/security boundaries.
+
+The most important principles are:
+
+1. Local-first.
+2. User-controlled permissions.
+3. No hidden recording.
+4. No hidden camera.
+5. No unauthorized screen capture.
+6. No bypassing Android security.
+7. No unrestricted AI control.
+8. Deterministic commands before LLM reasoning.
+9. OpenAI/ChatGPT is optional.
+10. Verify the project actually builds.
