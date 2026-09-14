@@ -12,11 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-/**
- * Background wake loop. It uses Android's installed recognition service as a compatibility
- * fallback and only executes commands containing the configured wake phrase. A native
- * Sherpa-ONNX keyword spotter can replace this component without changing the agent API.
- */
+/** Background wake-command compatibility loop. Native KWS can replace it later. */
 class AstraWakeLoop(private val context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var recognizer: SpeechRecognizer? = null
@@ -34,7 +30,6 @@ class AstraWakeLoop(private val context: Context) {
         recognizer?.cancel()
         recognizer?.destroy()
         recognizer = null
-        scope.coroutineContext.cancel()
     }
 
     private fun attach(sr: SpeechRecognizer) {
@@ -46,17 +41,13 @@ class AstraWakeLoop(private val context: Context) {
             override fun onEndOfSpeech() { if (running) listenAgain() }
             override fun onError(error: Int) { if (running) listenAgain() }
             override fun onResults(results: Bundle?) {
-                val values = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
-                val phrase = values.firstOrNull().orEmpty()
-                val wake = "astra"
-                if (phrase.lowercase(Locale.ROOT).contains(wake)) {
-                    val command = phrase.substringAfter(wake, "").trim()
+                val phrase = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+                if (phrase.lowercase(Locale.ROOT).contains("astra")) {
+                    val command = phrase.substringAfter("astra", "").trim()
                     if (command.isNotBlank()) {
                         scope.launch {
-                            AstraAgentRuntime(context.applicationContext).handle(
-                                command,
-                                context.getSharedPreferences("astra_runtime", Context.MODE_PRIVATE).getBoolean("local_only", true)
-                            )
+                            val localOnly = context.getSharedPreferences("astra_runtime", Context.MODE_PRIVATE).getBoolean("local_only", true)
+                            AstraAgentRuntime(context.applicationContext).handle(command, localOnly)
                         }
                     }
                 }
