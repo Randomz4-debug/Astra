@@ -23,10 +23,7 @@ data class AstraUiState(
 )
 
 class AstraViewModel(private val context: Context) : ViewModel() {
-    private val localEngine: AiEngine = LocalAiEngine()
-    private val cloudEngine: AiEngine = OpenAiResponsesEngine(context)
-    private val commands = LocalCommandEngine(context)
-    private val memory = MemoryManager(context)
+    private val runtime = AstraAgentRuntime(context)
     private val secure = SecureSettings(context)
     private val _ui = MutableStateFlow(AstraUiState(cloudConfigured = secure.openAiApiKey() != null))
     val ui: StateFlow<AstraUiState> = _ui
@@ -44,45 +41,13 @@ class AstraViewModel(private val context: Context) : ViewModel() {
         viewModelScope.launch {
             val clean = text.trim()
             _ui.value = _ui.value.copy(state = AssistantState.THINKING, transcript = clean, response = "")
-
             if (clean.equals("astra stop", true) || clean.equals("stop", true) || clean.equals("cancel", true)) {
                 _ui.value = _ui.value.copy(state = AssistantState.INTERRUPTED, response = "Stopped.")
                 return@launch
             }
-
-            val lower = clean.lowercase()
-            if (lower.startsWith("remember that ")) {
-                val body = clean.substringAfter("remember that ")
-                val parts = body.split(" is ", limit = 2)
-                if (parts.size == 2) {
-                    memory.remember(parts[0], parts[1])
-                    _ui.value = _ui.value.copy(state = AssistantState.SPEAKING, response = "I'll remember that locally.")
-                    return@launch
-                }
-            }
-            if (lower == "what do you remember" || lower == "show my memory") {
-                val all = memory.all()
-                val answer = if (all.isEmpty()) "I don't have any saved local memories." else all.entries.joinToString("; ") { "${it.key}: ${it.value}" }
-                _ui.value = _ui.value.copy(state = AssistantState.SPEAKING, response = answer)
-                return@launch
-            }
-            if (lower.startsWith("forget ")) {
-                memory.forget(clean.substringAfter("forget "))
-                _ui.value = _ui.value.copy(state = AssistantState.SPEAKING, response = "Forgotten from local Astra memory.")
-                return@launch
-            }
-            if (lower == "delete all astra memory") {
-                _ui.value = _ui.value.copy(state = AssistantState.EXECUTING, response = "Confirmation required before deleting all memory.")
-                return@launch
-            }
-
-            commands.handle(clean)?.let {
-                _ui.value = _ui.value.copy(state = AssistantState.EXECUTING, response = it.message)
-                return@launch
-            }
-
-            val answer = if (_ui.value.localOnly) localEngine.respond(clean) else cloudEngine.respond(clean)
-            _ui.value = _ui.value.copy(state = AssistantState.SPEAKING, response = answer)
+            val answer = runCatching { runtime.handle(clean, _ui.value.localOnly) }
+                .getOrElse { "Astra error: ${it.message ?: "unknown error"}" }
+            _ui.value = _ui.value.copy(state = if (answer == "Stopped.") AssistantState.INTERRUPTED else AssistantState.SPEAKING, response = answer)
         }
     }
 
