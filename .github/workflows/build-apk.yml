@@ -20,11 +20,17 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      - name: Build debug APK
-        run: gradle assembleDebug --no-daemon
-      - name: Upload APK
+      - name: Build local and cloud debug APKs
+        run: gradle assembleLocalDebug assembleCloudDebug --no-daemon
+      - name: Upload local-only APK
         uses: actions/upload-artifact@v4
         with:
-          name: astra-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: astra-local-debug-apk
+          path: app/build/outputs/apk/local/debug/app-local-debug.apk
+          if-no-files-found: error
+      - name: Upload cloud-enabled APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: astra-cloud-debug-apk
+          path: app/build/outputs/apk/cloud/debug/app-cloud-debug.apk
           if-no-files-found: error
