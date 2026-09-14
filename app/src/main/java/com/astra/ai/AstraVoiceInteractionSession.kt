@@ -1,5 +1,6 @@
 package com.astra.ai
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -15,32 +16,33 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.service.voice.VoiceInteractionSession
 import java.util.Locale
 
-class AstraVoiceInteractionSession(context: android.content.Context) : VoiceInteractionSession(context) {
+class AstraVoiceInteractionSession(private val sessionContext: Context) : VoiceInteractionSession(sessionContext) {
     private var recognizer: SpeechRecognizer? = null
     private var tts: TextToSpeech? = null
     private lateinit var status: TextView
     private lateinit var input: EditText
 
     override fun onCreateContentView(): View {
-        val root = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; setPadding(36, 28, 36, 28); setBackgroundColor(Color.rgb(5, 6, 10)) }
-        val title = TextView(context).apply { text = "ASTRA"; textSize = 28f; setTextColor(Color.WHITE); gravity = Gravity.CENTER }
-        status = TextView(context).apply { text = "Listening…"; textSize = 15f; setTextColor(Color.LTGRAY); gravity = Gravity.CENTER; setPadding(0, 12, 0, 16) }
-        input = EditText(context).apply { hint = "Ask Astra…"; setTextColor(Color.WHITE); setHintTextColor(Color.GRAY); setSingleLine(false) }
-        val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        val mic = Button(context).apply { text = "🎙"; setOnClickListener { startListening() } }
-        val send = Button(context).apply { text = "Send"; setOnClickListener { submit(input.text.toString()) } }
+        val root = LinearLayout(sessionContext).apply { orientation = LinearLayout.VERTICAL; setPadding(36, 28, 36, 28); setBackgroundColor(Color.rgb(5, 6, 10)) }
+        val title = TextView(sessionContext).apply { text = "ASTRA"; textSize = 28f; setTextColor(Color.WHITE); gravity = Gravity.CENTER }
+        status = TextView(sessionContext).apply { text = "Listening…"; textSize = 15f; setTextColor(Color.LTGRAY); gravity = Gravity.CENTER; setPadding(0, 12, 0, 16) }
+        input = EditText(sessionContext).apply { hint = "Ask Astra…"; setTextColor(Color.WHITE); setHintTextColor(Color.GRAY); setSingleLine(false) }
+        val row = LinearLayout(sessionContext).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val mic = Button(sessionContext).apply { text = "🎙"; setOnClickListener { startListening() } }
+        val send = Button(sessionContext).apply { text = "Send"; setOnClickListener { submit(input.text.toString()) } }
         row.addView(mic, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)); row.addView(send, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(title); root.addView(status); root.addView(input, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)); root.addView(row)
-        tts = TextToSpeech(context) { if (it == TextToSpeech.SUCCESS) tts?.language = Locale.getDefault() }
+        tts = TextToSpeech(sessionContext) { if (it == TextToSpeech.SUCCESS) tts?.language = Locale.getDefault() }
         startListening(); return root
     }
 
     private fun startListening() {
-        if (!SpeechRecognizer.isRecognitionAvailable(context)) { status.text = "Speech recognition is unavailable"; return }
+        if (!SpeechRecognizer.isRecognitionAvailable(sessionContext)) { status.text = "Speech recognition is unavailable"; return }
         recognizer?.destroy()
-        recognizer = SpeechRecognizer.createSpeechRecognizer(context).also { r ->
+        recognizer = SpeechRecognizer.createSpeechRecognizer(sessionContext).also { r ->
             r.setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) { status.text = "Listening…" }
                 override fun onBeginningOfSpeech() { status.text = "Listening…" }
@@ -59,7 +61,7 @@ class AstraVoiceInteractionSession(context: android.content.Context) : VoiceInte
     private fun submit(text: String) {
         val clean = text.trim(); if (clean.isBlank()) return
         status.text = "Thinking…"
-        val runtime = AstraAgentRuntime(context)
+        val runtime = AstraAgentRuntime(sessionContext)
         Thread {
             val answer = kotlinx.coroutines.runBlocking { runtime.handle(clean, false) }
             Handler(Looper.getMainLooper()).post { status.text = "Astra"; tts?.speak(answer, TextToSpeech.QUEUE_FLUSH, null, "astra-assistant"); input.setText(answer) }
