@@ -17,18 +17,30 @@ class LocalSpeechEngine : SpeechEngine { override suspend fun transcribe(): Stri
 
 class LocalTtsEngine(private val tts: android.speech.tts.TextToSpeech) : TtsEngine {
     override fun speak(text: String, languageTag: String?) {
-        if (!languageTag.isNullOrBlank()) {
+        if (!languageTag.isNullOrBlank() && languageTag != "auto") {
             val locale = java.util.Locale.forLanguageTag(languageTag)
             if (locale.language.isNotBlank()) {
                 val result = tts.setLanguage(locale)
-                if (result == android.speech.tts.TextToSpeech.LANG_MISSING_DATA || result == android.speech.tts.TextToSpeech.LANG_NOT_SUPPORTED) {
+                if (result == android.speech.tts.TextToSpeech.LANG_MISSING_DATA ||
+                    result == android.speech.tts.TextToSpeech.LANG_NOT_SUPPORTED
+                ) {
                     tts.language = java.util.Locale.getDefault()
                 }
             }
         }
         tts.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "astra")
     }
-    override fun stop() = tts.stop()
+
+    override fun stop() {
+        tts.stop()
+    }
 }
-class LocalWakeWordEngine : WakeWordEngine { override fun start() {}; override fun stop() {} }
-class LocalVisionEngine : VisionEngine { override suspend fun describe(): String = "Local vision engine is ready." }
+
+class LocalWakeWordEngine : WakeWordEngine {
+    override fun start() {}
+    override fun stop() {}
+}
+
+class LocalVisionEngine : VisionEngine {
+    override suspend fun describe(): String = "Local vision engine is ready."
+}
