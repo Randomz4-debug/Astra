@@ -1,4 +1,6 @@
 <voice-interaction-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:sessionService="com.astra.ai.AstraVoiceInteractionSessionService"
+    android:recognitionService="com.astra.ai.AstraRecognitionService"
     android:supportsAssist="true"
-    android:supportsLaunchVoiceAssistFromKeyguard="true" />
+    android:supportsLaunchVoiceAssistFromKeyguard="true"
+    android:supportsLocalInteraction="true" />
