@@ -3,7 +3,6 @@ package com.astra.ai
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.graphics.pdf.PdfRenderer
-import android.net.Uri
 import android.os.ParcelFileDescriptor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -35,12 +34,12 @@ class AstraFileProcessor(private val context: Context) {
 
     private fun isText(name: String): Boolean = listOf(".txt", ".md", ".csv", ".xml", ".html", ".htm", ".kt", ".java", ".py", ".js", ".ts", ".css", ".c", ".cpp", ".h", ".hpp", ".asm", ".s", ".yaml", ".yml", ".log", ".ini", ".gradle", ".properties").any(name::endsWith)
 
-    private fun processPdf(file: File): Result {
+    private suspend fun processPdf(file: File): Result {
         val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
         pfd.use { descriptor ->
             PdfRenderer(descriptor).use { renderer ->
-                val pages = minOf(renderer.pageCount, 12)
                 val out = StringBuilder("PDF: ${file.name}\nPages: ${renderer.pageCount}\n\n")
+                val pages = minOf(renderer.pageCount, 12)
                 for (i in 0 until pages) {
                     if (out.length >= MAX_TEXT) break
                     val page = renderer.openPage(i)
@@ -58,10 +57,11 @@ class AstraFileProcessor(private val context: Context) {
         }
     }
 
-    private fun processImage(file: File): Result {
+    private suspend fun processImage(file: File): Result {
         val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return Result("[Image could not be decoded.]", readable = false)
         return try {
-            Result("IMAGE: ${file.name}\n\n" + runCatching { LocalOcrEngine().read(bitmap) }.getOrDefault("[No readable text found in the image.]"), readable = true)
+            val text = runCatching { LocalOcrEngine().read(bitmap) }.getOrDefault("[No readable text found in the image.]")
+            Result("IMAGE: ${file.name}\n\n$text", readable = true)
         } finally { bitmap.recycle() }
     }
 
