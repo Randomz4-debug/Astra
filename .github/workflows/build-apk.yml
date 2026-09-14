@@ -21,14 +21,28 @@ jobs:
         with:
           gradle-version: '8.10.2'
       - name: Build local and cloud debug APKs
-        run: gradle assembleLocalDebug assembleCloudDebug --no-daemon
+        shell: bash
+        run: |
+          set +e
+          gradle assembleLocalDebug assembleCloudDebug --no-daemon --stacktrace 2>&1 | tee build.log
+          status=${PIPESTATUS[0]}
+          exit $status
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: astra-build-diagnostics
+          path: build.log
+          if-no-files-found: warn
       - name: Upload local-only APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: astra-local-debug-apk
           path: app/build/outputs/apk/local/debug/app-local-debug.apk
           if-no-files-found: error
       - name: Upload cloud-enabled APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: astra-cloud-debug-apk
