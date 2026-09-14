@@ -5,11 +5,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -23,82 +18,38 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
-    private val permissions = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) {}
-
+    private lateinit var voice: MultilingualVoiceController
+    private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        permissions.launch(arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA))
-        setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
-                AstraScreen()
-            }
-        }
+        permissions.launch(arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA, Manifest.permission.POST_NOTIFICATIONS))
+        voice = MultilingualVoiceController(this)
+        setContent { MaterialTheme(colorScheme = darkColorScheme()) { AstraScreen(this) } }
     }
+    fun listen(language: String, result: (String) -> Unit, state: (Boolean) -> Unit) = voice.listen(language, result, state)
+    fun stopListening() = voice.stop()
+    fun speak(text: String, language: String) = voice.speak(text, language)
+    override fun onDestroy() { voice.release(); super.onDestroy() }
 }
 
 @Composable
-fun AstraScreen(vm: AstraViewModel = viewModel()) {
+fun AstraScreen(activity: MainActivity, vm: AstraViewModel = viewModel()) {
     val ui by vm.ui.collectAsState()
     var input by remember { mutableStateOf("") }
-    val pulse = rememberInfiniteTransition(label = "pulse")
-        .animateFloat(
-            initialValue = 1f, targetValue = 1.12f,
-            animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
-            label = "scale"
-        )
-
-    Column(
-        Modifier.fillMaxSize().background(Color(0xFF08090D)).padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(Modifier.height(40.dp))
-        Text("ASTRA", style = MaterialTheme.typography.displaySmall)
-        Text(ui.state.name, color = Color.LightGray)
-
-        Spacer(Modifier.weight(1f))
-
-        Box(
-            Modifier.size(180.dp).scale(pulse.value).background(
-                MaterialTheme.colorScheme.primary.copy(alpha = .16f), CircleShape
-            ),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("A", style = MaterialTheme.typography.displayLarge)
+    var language by remember { mutableStateOf("auto") }
+    var listening by remember { mutableStateOf(false) }
+    val pulse = androidx.compose.animation.core.rememberInfiniteTransition(label = "pulse").animateFloat(1f, 1.1f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(800), androidx.compose.animation.core.RepeatMode.Reverse), label = "scale")
+    Column(Modifier.fillMaxSize().background(Color(0xFF08090D)).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Spacer(Modifier.height(30.dp)); Text("ASTRA", style = MaterialTheme.typography.displaySmall); Text(if (listening) "LISTENING" else ui.state.name, color = Color.LightGray)
+        Spacer(Modifier.weight(1f)); Box(Modifier.size(170.dp).scale(pulse.value).background(MaterialTheme.colorScheme.primary.copy(alpha=.16f), CircleShape), contentAlignment=Alignment.Center) { Text("A", style=MaterialTheme.typography.displayLarge) }
+        Spacer(Modifier.height(18.dp)); Text(ui.transcript, color=Color.LightGray); Text(ui.response)
+        Spacer(Modifier.height(16.dp)); OutlinedTextField(language, { language=it }, Modifier.fillMaxWidth(), label={ Text("Language: auto / en-US / hi-IN / bn-IN / etc.") }, singleLine=true)
+        Spacer(Modifier.height(8.dp)); OutlinedTextField(input, { input=it }, Modifier.fillMaxWidth(), label={ Text("Type or dictate in any supported language") })
+        Spacer(Modifier.height(8.dp)); Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            Button({ if(listening) activity.stopListening() else activity.listen(language,{ text -> input=text; vm.ask(text) },{ listening=it }) }, Modifier.weight(1f)) { Text(if(listening) "Stop" else "Listen") }
+            Button({ val text=input; if(text.isNotBlank()){ vm.ask(text); activity.speak(text,language); input="" } }, Modifier.weight(1f)) { Text("Speak") }
         }
-
-        Spacer(Modifier.height(24.dp))
-        Text(ui.transcript, color = Color.LightGray)
-        Text(ui.response, style = MaterialTheme.typography.bodyLarge)
-
-        Spacer(Modifier.weight(1f))
-
-        OutlinedTextField(
-            value = input,
-            onValueChange = { input = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Talk to Astra") },
-            singleLine = true
-        )
-        Spacer(Modifier.height(10.dp))
-        Button(
-            onClick = { vm.ask(input); input = "" },
-            modifier = Modifier.fillMaxWidth()
-        ) { Text("Send") }
-
-        Row(
-            Modifier.fillMaxWidth().padding(top = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Switch(ui.localOnly, onCheckedChange = vm::setLocalOnly)
-                Text("Local only")
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Switch(ui.background, onCheckedChange = vm::setBackground)
-                Text("Background")
-            }
-        }
+        Spacer(Modifier.height(8.dp)); Text("Unicode text + Android speech/TTS. Auto mode enables language detection where the device speech service supports it.", style=MaterialTheme.typography.bodySmall, color=Color.Gray)
+        Spacer(Modifier.height(8.dp)); Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween) { Row(verticalAlignment=Alignment.CenterVertically){ Switch(ui.localOnly,vm::setLocalOnly); Text("Local only") }; Row(verticalAlignment=Alignment.CenterVertically){ Switch(ui.background,vm::setBackground); Text("Background") } }
     }
 }
