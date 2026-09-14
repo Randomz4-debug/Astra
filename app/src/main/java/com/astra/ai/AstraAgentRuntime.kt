@@ -8,6 +8,7 @@ class AstraAgentRuntime(context: Context) {
     private val localEngine: AiEngine = LocalAiEngine(appContext)
     private val cloudEngine: AiEngine = OpenAiResponsesEngine(appContext)
     private val commands = LocalCommandEngine(appContext)
+    private val customCommands = AstraCustomCommandEngine(appContext)
     private val memory = MemoryManager(appContext)
     private val connectivity = AstraConnectivityManager(appContext)
     private val prefs = appContext.getSharedPreferences("astra_runtime", Context.MODE_PRIVATE)
@@ -18,23 +19,23 @@ class AstraAgentRuntime(context: Context) {
         val clean = input.trim()
         if (clean.isBlank()) return ""
         val lower = clean.lowercase()
+        val customResult = runCatching { customCommands.handle(clean) }.getOrNull()
+        if (customResult != null) return customResult.message
         val chatId = currentChatId()
         chats.append(chatId, "user", clean)
-
         val answer = try {
             when {
-                lower == "stop" || lower == "cancel" || lower == "astra stop" -> "Stopped."
+                lower == "stop" || lower == "cancel" || lower == "astra stop" -> { customCommands.stopAll(); "Stopped." }
                 lower.startsWith("call ") || lower.startsWith("dial ") -> {
                     val target = clean.substringAfter(' ').trim()
                     commands.handle("call $target")?.message ?: "I could not start the call."
                 }
                 lower.startsWith("rename yourself to ") || lower.startsWith("call yourself ") -> {
                     val name = clean.substringAfter(" to ", "").trim().ifBlank { clean.substringAfter(' ').trim() }
-                    if (name.isNotBlank()) { prefs.edit().putString("assistant_name", name).apply(); "Okay. From now on, I'm $name." }
-                    else "Please tell me the new name you want me to use."
+                    if (name.isNotBlank()) { prefs.edit().putString("assistant_name", name).apply(); "Okay. From now on, I'm $name." } else "Please tell me the new name you want me to use."
                 }
-                lower == "switch to offline" || lower == "use offline ai" || lower == "go offline" -> { prefs.edit().putString("ai_mode", "offline").apply(); "Switched to offline/local AI." }
-                lower == "switch to online" || lower == "use online ai" || lower == "go online" -> { prefs.edit().putString("ai_mode", "online").apply(); "Switched to online AI when internet is available." }
+                lower.startsWith("switch to offline") || lower == "use offline ai" || lower == "go offline" -> { prefs.edit().putString("ai_mode", "offline").apply(); "Switched to offline/local AI." }
+                lower.startsWith("switch to online") || lower == "use online ai" || lower == "go online" -> { prefs.edit().putString("ai_mode", "online").apply(); "Switched to online AI when internet is available." }
                 lower == "automatic mode" || lower == "auto ai" || lower == "use automatic ai" -> { prefs.edit().putString("ai_mode", "auto").apply(); "Automatic AI routing enabled." }
                 lower.startsWith("use model ") -> { val model = clean.substringAfter("use model ").trim(); val gateway = LocalAiGateway(appContext); gateway.configure(gateway.endpoint(), model); "Local model set to $model." }
                 lower.startsWith("use provider ") -> { val id = clean.substringAfter("use provider ").trim(); prefs.edit().putString("selected_provider", id).apply(); "Provider selection saved. If available, I'll use that provider." }
@@ -42,34 +43,35 @@ class AstraAgentRuntime(context: Context) {
                     val body = clean.substringAfter("remember that "); val parts = body.split(" is ", limit = 2)
                     if (parts.size == 2) { memory.remember(parts[0].trim(), parts[1].trim()); "I'll remember that locally." } else "Tell me what you want me to remember."
                 }
-                lower == "what do you remember" || lower == "show my memory" -> {
-                    val all = memory.all(); if (all.isEmpty()) "I don't have any saved local memories." else all.entries.joinToString("; ") { "${it.key}: ${it.value}" }
-                }
+                lower == "what do you remember" || lower == "show my memory" -> { val all = memory.all(); if (all.isEmpty()) "I don't have any saved local memories." else all.entries.joinToString("; ") { "${it.key}: ${it.value}" } }
                 lower.startsWith("forget ") -> { memory.forget(clean.substringAfter("forget ").trim()); "Forgotten from local Astra memory." }
                 lower == "delete all astra memory" -> "I need confirmation before deleting all Astra memory."
+                lower.startsWith("add custom command ") -> {
+                    val body = clean.substringAfter("add custom command ").trim(); val parts = body.split("=", limit = 2)
+                    if (parts.size != 2) "Use: add custom command <trigger> = <actions>" else runCatching { val c = customCommands.save(parts[0].trim(), parts[1].trim()); "Saved custom command ${c.id}: ${c.trigger}." }.getOrElse { "Could not save custom command: ${it.message}" }
+                }
+                lower.startsWith("delete custom command ") -> { val trigger = clean.substringAfter("command ").trim(); if (customCommands.delete(trigger)) "Deleted custom command $trigger." else "Custom command not found." }
+                lower == "list custom commands" || lower == "show custom commands" -> { val all = customCommands.commands(); if (all.isEmpty()) "No custom commands saved." else all.joinToString("; ") { "${it.id}: ${it.trigger} -> ${it.actions}" } }
                 else -> {
-                    // Tool commands always run before the reasoning model, regardless of online/offline mode.
                     val tool = commands.handle(clean)
                     if (tool != null) tool.message else generateModelAnswer(chatId, clean, localOnly)
                 }
             }
-        } catch (t: Throwable) {
-            "Astra error: ${t.message ?: "unknown error"}"
-        }
+        } catch (t: Throwable) { "Astra error: ${t.message ?: "unknown error"}" }
         chats.append(chatId, "assistant", answer)
         return answer
     }
 
+    /** Model call for automation loops without creating a visible chat message. */
+    suspend fun automationReason(instruction: String): String = generateModelAnswer(currentChatId(), instruction, false)
+
     private suspend fun generateModelAnswer(chatId: String, clean: String, localOnly: Boolean): String {
         val history = chats.recentMessages(chatId, oneYear = true, limit = 80)
-        val historyText = if (history.isEmpty()) "(no earlier messages)" else history.dropLast(1).joinToString("\n") {
-            "${if (it.role == "user") "USER" else "ASTRA"}: ${it.text}"
-        }
+        val historyText = if (history.isEmpty()) "(no earlier messages)" else history.dropLast(1).joinToString("\n") { "${if (it.role == "user") "USER" else "ASTRA"}: ${it.text}" }
         val toolCapabilities = """
 You are the reasoning brain inside the Android assistant Astra. The Android execution layer is part of the same assistant.
-Available capabilities include authorized app launching, opening arbitrary URLs in the browser, opening Maps, camera access/photo workflows, screen OCR/capture when permission is granted, accessibility UI actions when enabled, notifications/replies where Android exposes an action, phone calls where permitted, files/workspace, memory, local/LAN/cloud AI, and other tools exposed by Astra.
-If the user asks for an action that is exposed by Astra, do not say that the underlying model cannot do it. Instead execute it through a tool when available, or clearly state the exact Android permission/confirmation that is missing. Never claim an action succeeded unless Astra actually executed it.
-To launch a game such as BGMI, use the installed-app launcher when the user asks. To open a URL, use the browser tool. To take a picture, use the camera workflow; Android may require the camera UI/user confirmation.
+Available capabilities include authorized app launching, opening arbitrary URLs in the browser, opening Maps, camera access/photo workflows, screen OCR/capture when permission is granted, accessibility UI actions when enabled, notifications/replies where Android exposes an action, phone calls where permitted, files/workspace, memory, local/LAN/cloud AI, and user-defined custom command workflows.
+Offline/online changes only the reasoning provider; they do not remove Astra's Android capabilities. If an action is exposed by Astra, do not claim the underlying model cannot do it. Use the appropriate execution layer when available, or state the exact permission/confirmation needed. Never claim an action succeeded unless Astra actually executed it.
 """.trimIndent()
         val prompt = AstraPersona.systemPrompt(appContext) + "\n\n" + toolCapabilities + "\n\nRECENT ASTRA CHAT HISTORY (up to 1 year, current chat):\n" + historyText + "\n\nCURRENT USER REQUEST:\n" + clean
         val mode = prefs.getString("ai_mode", "auto") ?: "auto"
@@ -82,41 +84,21 @@ To launch a game such as BGMI, use the installed-app launcher when the user asks
         val existing = prefs.getString("current_chat_id", null)
         if (!existing.isNullOrBlank()) return existing
         val chat = chats.ensureChat(title = "New chat")
-        prefs.edit().putString("current_chat_id", chat.id).apply()
-        return chat.id
+        prefs.edit().putString("current_chat_id", chat.id).apply(); return chat.id
     }
-
-    fun newChat(): String {
-        val chat = chats.ensureChat(title = "New chat")
-        prefs.edit().putString("current_chat_id", chat.id).apply()
-        return chat.id
-    }
-
-    fun selectChat(id: String): Boolean {
-        val exists = chats.listChats().any { it.id == id }
-        if (!exists) return false
-        prefs.edit().putString("current_chat_id", id).apply()
-        return true
-    }
-
+    fun newChat(): String { val chat = chats.ensureChat(title = "New chat"); prefs.edit().putString("current_chat_id", chat.id).apply(); return chat.id }
+    fun selectChat(id: String): Boolean { val exists = chats.listChats().any { it.id == id }; if (!exists) return false; prefs.edit().putString("current_chat_id", id).apply(); return true }
     fun listChats(): List<AstraChatStore.Chat> = chats.listChats()
     fun messages(chatId: String): List<AstraChatStore.Message> = chats.messages(chatId, 0L, 500)
     fun renameChat(id: String, title: String) = chats.rename(id, title)
-    fun deleteChat(id: String) {
-        chats.delete(id)
-        if (prefs.getString("current_chat_id", "") == id) prefs.edit().remove("current_chat_id").apply()
-    }
-    fun clearAllChats() {
-        chats.clearAll()
-        prefs.edit().remove("current_chat_id").apply()
-    }
+    fun deleteChat(id: String) { chats.delete(id); if (prefs.getString("current_chat_id", "") == id) prefs.edit().remove("current_chat_id").apply() }
+    fun clearAllChats() { chats.clearAll(); prefs.edit().remove("current_chat_id").apply() }
+    fun customCommands(): List<AstraCustomCommandStore.Command> = customCommands.commands()
+    fun stopCustomCommands() = customCommands.stopAll()
 
     private suspend fun cloudOrLocal(prompt: String): String {
         val selected = prefs.getString("selected_provider", "")?.trim().orEmpty()
-        if (selected.isNotBlank()) {
-            val answer = runCatching { providers.chat(selected, prompt) }.getOrNull()
-            if (!answer.isNullOrBlank() && !answer.startsWith("Provider unavailable")) return answer
-        }
+        if (selected.isNotBlank()) { val answer = runCatching { providers.chat(selected, prompt) }.getOrNull(); if (!answer.isNullOrBlank() && !answer.startsWith("Provider unavailable")) return answer }
         val cloud = cloudEngine.respond(prompt)
         if (cloud == "OpenAI is unavailable right now." || cloud.startsWith("OpenAI request failed") || cloud == "OpenAI is not configured. Add your API key in Astra's cloud settings.") return localEngine.respond(prompt)
         return cloud
