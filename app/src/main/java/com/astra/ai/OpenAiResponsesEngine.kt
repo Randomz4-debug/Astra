@@ -3,7 +3,6 @@ package com.astra.ai
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -13,10 +12,10 @@ import java.net.URL
  * the user explicitly selects cloud mode and has stored an API key.
  */
 class OpenAiResponsesEngine(context: Context) : AiEngine {
-    private val secure = SecureSettings(context.applicationContext)
+    private val settings = OpenAiSettings(context.applicationContext)
 
     override suspend fun respond(input: String): String = withContext(Dispatchers.IO) {
-        val key = secure.openAiApiKey() ?: return@withContext "OpenAI is not configured. Add your API key in Astra's cloud settings."
+        val key = settings.apiKey() ?: return@withContext "OpenAI is not configured. Add your API key in Astra's OpenAI settings."
         val connection = (URL("https://api.openai.com/v1/responses").openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             connectTimeout = 15_000
@@ -27,12 +26,12 @@ class OpenAiResponsesEngine(context: Context) : AiEngine {
         }
         try {
             val body = JSONObject().apply {
-                put("model", "gpt-5.6-luna")
+                put("model", settings.model())
                 put("input", input)
             }.toString()
             connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
             val stream = if (connection.responseCode in 200..299) connection.inputStream else connection.errorStream
-            val response = stream.bufferedReader().use { it.readText() }
+            val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
             if (connection.responseCode !in 200..299) return@withContext "OpenAI request failed (${connection.responseCode})."
             extractText(JSONObject(response))
         } catch (_: Exception) {
