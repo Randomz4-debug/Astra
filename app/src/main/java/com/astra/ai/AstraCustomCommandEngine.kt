@@ -11,9 +11,11 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
 class AstraCustomCommandEngine(private val context: Context) {
+    companion object {
+        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        private val active = ConcurrentHashMap<Int, Job>()
+    }
     private val store = AstraCustomCommandStore(context)
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val active = ConcurrentHashMap<Int, Job>()
 
     suspend fun handle(input: String): ToolResult? {
         val text = input.trim(); if (text.isBlank()) return null
