@@ -16,29 +16,43 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 class AstraForegroundService : Service() {
-    companion object { const val ACTION_START = "ASTRA_START"; const val ACTION_STOP = "ASTRA_STOP" }
+    companion object {
+        const val ACTION_START = "ASTRA_START"
+        const val ACTION_STOP = "ASTRA_STOP"
+        const val ACTION_START_PROJECTION = "ASTRA_START_PROJECTION"
+    }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var wake: AstraWakeWordController? = null
     private var runtime: AstraAgentRuntime? = null
 
     override fun onCreate() {
         super.onCreate()
-        val channel = NotificationChannel("astra_assistant", "Astra Assistant", NotificationManager.IMPORTANCE_LOW).apply { description = "User-enabled Astra background voice assistant" }
+        val channel = NotificationChannel("astra_assistant", "Astra Assistant", NotificationManager.IMPORTANCE_LOW).apply { description = "User-enabled Astra background services" }
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        runtime = AstraAgentRuntime(this)
+        promote(ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+    }
+
+    private fun promote(type: Int) {
         val notification: Notification = NotificationCompat.Builder(this, "astra_assistant")
             .setContentTitle("Astra is active")
-            .setContentText("Background voice assistant is enabled.")
+            .setContentText(if (type and ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION != 0) "Screen access is enabled by your choice." else "Background voice assistant is enabled.")
             .setSmallIcon(com.astra.ai.R.drawable.ic_astra)
             .setOngoing(true)
             .setCategory(Notification.CATEGORY_SERVICE)
             .build()
-        if (Build.VERSION.SDK_INT >= 29) startForeground(1001, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE) else startForeground(1001, notification)
-        runtime = AstraAgentRuntime(this)
+        if (Build.VERSION.SDK_INT >= 29) startForeground(1001, notification, type) else startForeground(1001, notification)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) { stopSelf(); return START_NOT_STICKY }
-        startAssistantLoop()
+        when (intent?.action) {
+            ACTION_STOP -> { stopSelf(); return START_NOT_STICKY }
+            ACTION_START_PROJECTION -> {
+                runCatching { promote(ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION) }
+                return START_STICKY
+            }
+            else -> startAssistantLoop()
+        }
         return START_STICKY
     }
 
@@ -47,23 +61,16 @@ class AstraForegroundService : Service() {
         val controller = AstraWakeWordController(this)
         wake = controller
         val prefs = getSharedPreferences("astra_runtime", MODE_PRIVATE)
-        val localOnly = prefs.getBoolean("local_only", false)
-        val alwaysListen = prefs.getBoolean("always_listen", false)
-        if (!alwaysListen) return
-        val wakeWord = prefs.getString("wake_word", "astra") ?: "astra"
+        if (!prefs.getBoolean("always_listen", false)) return
         controller.start("", "auto") { command ->
             if (command.isBlank()) return@start
             scope.launch {
-                val response = runCatching { runtime?.handle(command, localOnly) ?: "Astra is not ready." }.getOrElse { "Astra error: ${it.message ?: "unknown error"}" }
+                val response = runCatching { runtime?.handle(command, prefs.getBoolean("local_only", false)) ?: "Astra is not ready." }.getOrElse { "Astra error: ${it.message ?: "unknown error"}" }
                 controller.speakResponse(response)
             }
         }
     }
 
-    override fun onDestroy() {
-        wake?.stop(); wake?.release(); wake = null
-        scope.cancel(); runtime = null
-        super.onDestroy()
-    }
+    override fun onDestroy() { wake?.stop(); wake?.release(); wake = null; scope.cancel(); runtime = null; super.onDestroy() }
     override fun onBind(intent: Intent?): IBinder? = null
 }
