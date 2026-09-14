@@ -15,9 +15,21 @@ class AstraNotificationListenerService : NotificationListenerService() {
         private val _notifications = MutableStateFlow<List<NotificationSummary>>(emptyList())
         val notifications: StateFlow<List<NotificationSummary>> = _notifications
         fun current(): AstraNotificationListenerService? = instance
+        fun latest(): NotificationSummary? = _notifications.value.firstOrNull()
     }
 
-    override fun onListenerConnected() { instance = this }
+    override fun onListenerConnected() {
+        instance = this
+        _notifications.value = activeNotifications.orEmpty().map { sbn ->
+            NotificationSummary(
+                sbn.key,
+                sbn.packageName,
+                sbn.notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty(),
+                sbn.notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty(),
+                System.currentTimeMillis()
+            )
+        }.take(50)
+    }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         val n = sbn.notification
@@ -33,9 +45,8 @@ class AstraNotificationListenerService : NotificationListenerService() {
 
     fun reply(key: String, message: String): ToolResult {
         val sbn = activeNotifications.firstOrNull { it.key == key } ?: return ToolResult(false, "Notification is no longer available.")
-        val action = sbn.notification.actions?.firstOrNull { action ->
-            action.remoteInputs?.any { it.resultKey.isNotBlank() } == true
-        } ?: return ToolResult(false, "This notification does not expose a reply action.")
+        val action = sbn.notification.actions?.firstOrNull { it.remoteInputs?.any { input -> input.resultKey.isNotBlank() } == true }
+            ?: return ToolResult(false, "This notification does not expose a reply action.")
         val input = action.remoteInputs!!.first { it.resultKey.isNotBlank() }
         val intent = Intent()
         val results = android.os.Bundle().apply { putCharSequence(input.resultKey, message) }
