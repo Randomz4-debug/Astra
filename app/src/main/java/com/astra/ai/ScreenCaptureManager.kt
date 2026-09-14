@@ -14,58 +14,90 @@ import android.os.Handler
 import android.os.Looper
 import android.util.DisplayMetrics
 
+/** User-authorized MediaProjection screen reader. Permission must be granted for every capture session. */
 class ScreenCaptureManager(private val context: Context) {
+    private val main = Handler(Looper.getMainLooper())
     private var projection: MediaProjection? = null
     private var display: VirtualDisplay? = null
     private var reader: ImageReader? = null
+    private var projectionData: Intent? = null
 
     fun permissionIntent(): Intent =
         (context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager).createScreenCaptureIntent()
 
-    fun attachResult(resultCode: Int, data: Intent): Boolean {
-        if (resultCode != Activity.RESULT_OK) return false
-        val manager = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        projection = manager.getMediaProjection(resultCode, data)
-        return projection != null
+    fun attachResult(resultCode: Int, data: Intent?): Boolean {
+        if (resultCode != Activity.RESULT_OK || data == null) return false
+        return runCatching {
+            releaseCaptureOnly()
+            val manager = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            val newProjection = manager.getMediaProjection(resultCode, data) ?: return false
+            projection = newProjection
+            projectionData = Intent(data)
+            true
+        }.getOrDefault(false)
     }
+
+    fun hasPermission(): Boolean = projection != null
 
     fun capture(onResult: (Bitmap?) -> Unit) {
         val media = projection ?: return onResult(null)
-        val metrics = DisplayMetrics()
-        @Suppress("DEPRECATION") context.getSystemService(Context.WINDOW_SERVICE).let {
-            @Suppress("DEPRECATION") (it as android.view.WindowManager).defaultDisplay.getRealMetrics(metrics)
+        try {
+            val metrics = DisplayMetrics()
+            @Suppress("DEPRECATION") val wm = context.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
+            @Suppress("DEPRECATION") wm.defaultDisplay.getRealMetrics(metrics)
+            val width = metrics.widthPixels.coerceAtLeast(1)
+            val height = metrics.heightPixels.coerceAtLeast(1)
+            releaseCaptureOnly()
+            reader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
+            val r = reader ?: return onResult(null)
+            display = media.createVirtualDisplay(
+                "AstraScreen",
+                width,
+                height,
+                metrics.densityDpi,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                r.surface,
+                null,
+                main
+            )
+            r.setOnImageAvailableListener({ source ->
+                val image = runCatching { source.acquireLatestImage() }.getOrNull() ?: return@setOnImageAvailableListener
+                try {
+                    val plane = image.planes.firstOrNull()
+                    if (plane == null) { onResult(null); return@setOnImageAvailableListener }
+                    val pixelStride = plane.pixelStride
+                    val rowStride = plane.rowStride
+                    val rowPadding = rowStride - pixelStride * image.width
+                    val paddedWidth = image.width + (rowPadding / pixelStride).coerceAtLeast(0)
+                    val raw = Bitmap.createBitmap(paddedWidth, image.height, Bitmap.Config.ARGB_8888)
+                    raw.copyPixelsFromBuffer(plane.buffer)
+                    val bitmap = if (paddedWidth != image.width) Bitmap.createBitmap(raw, 0, 0, image.width, image.height) else raw
+                    if (bitmap !== raw) raw.recycle()
+                    onResult(bitmap)
+                } catch (_: Throwable) {
+                    onResult(null)
+                } finally {
+                    image.close()
+                    releaseCaptureOnly()
+                }
+            }, main)
+        } catch (_: Throwable) {
+            releaseCaptureOnly()
+            onResult(null)
         }
-        reader?.close()
-        reader = ImageReader.newInstance(metrics.widthPixels, metrics.heightPixels, PixelFormat.RGBA_8888, 2)
-        val r = reader!!
-        display?.release()
-        display = media.createVirtualDisplay(
-            "AstraScreen",
-            metrics.widthPixels,
-            metrics.heightPixels,
-            metrics.densityDpi,
-            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-            r.surface,
-            null,
-            Handler(Looper.getMainLooper())
-        )
-        r.setOnImageAvailableListener({ source ->
-            val image = source.acquireLatestImage() ?: return@setOnImageAvailableListener
-            try {
-                val plane = image.planes[0]
-                val width = image.width
-                val height = image.height
-                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                bitmap.copyPixelsFromBuffer(plane.buffer)
-                onResult(bitmap)
-            } catch (_: Exception) { onResult(null) }
-            finally { image.close(); release() }
-        }, Handler(Looper.getMainLooper()))
+    }
+
+    private fun releaseCaptureOnly() {
+        try { display?.release() } catch (_: Throwable) {}
+        display = null
+        try { reader?.close() } catch (_: Throwable) {}
+        reader = null
     }
 
     fun release() {
-        display?.release(); display = null
-        reader?.close(); reader = null
-        projection?.stop(); projection = null
+        releaseCaptureOnly()
+        try { projection?.stop() } catch (_: Throwable) {}
+        projection = null
+        projectionData = null
     }
 }
