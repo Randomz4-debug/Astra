@@ -8,12 +8,12 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
-/** Executes user-defined commands. Accessibility is used only after explicit user enablement. */
 class AstraCustomCommandEngine(private val context: Context) {
     private val store = AstraCustomCommandStore(context)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val active = mutableMapOf<Int, Job>()
+    private val active = ConcurrentHashMap<Int, Job>()
 
     suspend fun handle(input: String): ToolResult? {
         val text = input.trim(); if (text.isBlank()) return null
@@ -24,7 +24,11 @@ class AstraCustomCommandEngine(private val context: Context) {
             if (c == null) return ToolResult(false, "Custom command not found: $trigger")
             stop(c.id); return ToolResult(true, "Custom command ${c.id} (${c.trigger}) stopped.")
         }
-        if (lower.startsWith("delete custom command ")) { val trigger = text.substringAfter("command ", "").trim(); val ok = store.delete(trigger); stopByTrigger(trigger); return ToolResult(ok, if (ok) "Deleted custom command $trigger." else "Custom command not found.") }
+        if (lower.startsWith("delete custom command ")) {
+            val trigger = text.substringAfter("command ", "").trim(); val c = store.list().firstOrNull { it.trigger.equals(trigger, true) }
+            if (c == null) return ToolResult(false, "Custom command not found.")
+            stop(c.id); store.delete(trigger); return ToolResult(true, "Deleted custom command $trigger.")
+        }
         val off = lower.endsWith(" off"); val candidate = text.removeSuffix(" on").removeSuffix(" off").trim()
         val command = store.find(candidate) ?: return null
         return if (off) { stop(command.id); ToolResult(true, "Custom command ${command.id} (${command.trigger}) stopped.") } else { start(command); ToolResult(true, "Custom command ${command.id} (${command.trigger}) started.") }
@@ -77,6 +81,6 @@ class AstraCustomCommandEngine(private val context: Context) {
     fun stopAll() { active.values.toList().forEach { it.cancel() }; active.clear() }
     fun commands(): List<AstraCustomCommandStore.Command> = store.list()
     fun save(trigger: String, actions: String): AstraCustomCommandStore.Command = store.addOrUpdate(trigger, actions)
-    fun delete(trigger: String): Boolean { stopByTrigger(trigger); return store.delete(trigger) }
+    fun delete(trigger: String): Boolean { val c = store.list().firstOrNull { it.trigger.equals(trigger, true) }; if (c != null) stop(c.id); return store.delete(trigger) }
     fun toggle(trigger: String, enabled: Boolean): Boolean = if (!enabled) { stopByTrigger(trigger); store.setEnabled(trigger, false) } else store.setEnabled(trigger, true)
 }
