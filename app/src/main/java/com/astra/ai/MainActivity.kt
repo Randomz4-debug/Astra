@@ -38,18 +38,19 @@ fun AstraScreen(activity: MainActivity, vm: AstraViewModel = viewModel()) {
     var input by remember { mutableStateOf("") }
     var language by remember { mutableStateOf("auto") }
     var listening by remember { mutableStateOf(false) }
-    val pulse = androidx.compose.animation.core.rememberInfiniteTransition(label = "pulse").animateFloat(1f, 1.1f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(800), androidx.compose.animation.core.RepeatMode.Reverse), label = "scale")
-    Column(Modifier.fillMaxSize().background(Color(0xFF08090D)).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Spacer(Modifier.height(30.dp)); Text("ASTRA", style = MaterialTheme.typography.displaySmall); Text(if (listening) "LISTENING" else ui.state.name, color = Color.LightGray)
-        Spacer(Modifier.weight(1f)); Box(Modifier.size(170.dp).scale(pulse.value).background(MaterialTheme.colorScheme.primary.copy(alpha=.16f), CircleShape), contentAlignment=Alignment.Center) { Text("A", style=MaterialTheme.typography.displayLarge) }
-        Spacer(Modifier.height(18.dp)); Text(ui.transcript, color=Color.LightGray); Text(ui.response)
-        Spacer(Modifier.height(16.dp)); OutlinedTextField(language, { language=it }, Modifier.fillMaxWidth(), label={ Text("Language: auto / en-US / hi-IN / bn-IN / etc.") }, singleLine=true)
-        Spacer(Modifier.height(8.dp)); OutlinedTextField(input, { input=it }, Modifier.fillMaxWidth(), label={ Text("Type or dictate in any supported language") })
-        Spacer(Modifier.height(8.dp)); Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            Button({ if(listening) activity.stopListening() else activity.listen(language,{ text -> input=text; vm.ask(text) },{ listening=it }) }, Modifier.weight(1f)) { Text(if(listening) "Stop" else "Listen") }
-            Button({ val text=input; if(text.isNotBlank()){ vm.ask(text); activity.speak(text,language); input="" } }, Modifier.weight(1f)) { Text("Speak") }
+    val pulse = androidx.compose.animation.core.rememberInfiniteTransition(label="pulse").animateFloat(1f,1.1f,androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(800),androidx.compose.animation.core.RepeatMode.Reverse),label="scale")
+    LaunchedEffect(ui.response) { if (ui.response.isNotBlank()) activity.speak(ui.response, language) }
+    Column(Modifier.fillMaxSize().background(Color(0xFF08090D)).padding(20.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+        Spacer(Modifier.height(30.dp)); Text("ASTRA",style=MaterialTheme.typography.displaySmall); Text(if(listening) "LISTENING" else ui.state.name,color=Color.LightGray)
+        Spacer(Modifier.weight(1f)); Box(Modifier.size(170.dp).scale(pulse.value).background(MaterialTheme.colorScheme.primary.copy(alpha=.16f),CircleShape),contentAlignment=Alignment.Center){Text("A",style=MaterialTheme.typography.displayLarge)}
+        Spacer(Modifier.height(18.dp)); Text(ui.transcript,color=Color.LightGray); Text(ui.response)
+        Spacer(Modifier.height(16.dp)); OutlinedTextField(language,{language=it},Modifier.fillMaxWidth(),label={Text("Language: auto / en-US / hi-IN / etc.")},singleLine=true)
+        Spacer(Modifier.height(8.dp)); OutlinedTextField(input,{input=it},Modifier.fillMaxWidth(),label={Text("Type or dictate in any supported language")})
+        Spacer(Modifier.height(8.dp)); Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            Button({if(listening)activity.stopListening() else activity.listen(language,{text->input=text;vm.ask(text)},{listening=it})},Modifier.weight(1f)){Text(if(listening)"Stop" else "Listen")}
+            Button({if(input.isNotBlank()){vm.ask(input);input=""}},Modifier.weight(1f)){Text("Send & Speak")}
         }
-        Spacer(Modifier.height(8.dp)); Text("Unicode text + Android speech/TTS. Auto mode enables language detection where the device speech service supports it.", style=MaterialTheme.typography.bodySmall, color=Color.Gray)
-        Spacer(Modifier.height(8.dp)); Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween) { Row(verticalAlignment=Alignment.CenterVertically){ Switch(ui.localOnly,vm::setLocalOnly); Text("Local only") }; Row(verticalAlignment=Alignment.CenterVertically){ Switch(ui.background,vm::setBackground); Text("Background") } }
+        Spacer(Modifier.height(8.dp)); Text("Auto mode uses Android language detection when supported. BCP-47 tags can force a language. Text input accepts Unicode scripts.",style=MaterialTheme.typography.bodySmall,color=Color.Gray)
+        Spacer(Modifier.height(8.dp)); Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Row(verticalAlignment=Alignment.CenterVertically){Switch(ui.localOnly,vm::setLocalOnly);Text("Local only")};Row(verticalAlignment=Alignment.CenterVertically){Switch(ui.background,vm::setBackground);Text("Background")}}
     }
 }
