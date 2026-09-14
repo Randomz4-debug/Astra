@@ -16,9 +16,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 class AstraForegroundService : Service() {
+    companion object { const val ACTION_START = "ASTRA_START"; const val ACTION_STOP = "ASTRA_STOP" }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private lateinit var wake: AstraWakeWordController
-    private lateinit var runtime: AstraAgentRuntime
+    private var wake: AstraWakeWordController? = null
+    private var runtime: AstraAgentRuntime? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -26,29 +27,43 @@ class AstraForegroundService : Service() {
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         val notification: Notification = NotificationCompat.Builder(this, "astra_assistant")
             .setContentTitle("Astra is active")
-            .setContentText("Always-listening mode is enabled by the user.")
+            .setContentText("Background voice assistant is enabled.")
             .setSmallIcon(com.astra.ai.R.drawable.ic_astra)
             .setOngoing(true)
             .setCategory(Notification.CATEGORY_SERVICE)
             .build()
         if (Build.VERSION.SDK_INT >= 29) startForeground(1001, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE) else startForeground(1001, notification)
-
         runtime = AstraAgentRuntime(this)
-        wake = AstraWakeWordController(this)
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP) { stopSelf(); return START_NOT_STICKY }
+        startAssistantLoop()
+        return START_STICKY
+    }
+
+    private fun startAssistantLoop() {
+        wake?.stop(); wake?.release()
+        val controller = AstraWakeWordController(this)
+        wake = controller
         val prefs = getSharedPreferences("astra_runtime", MODE_PRIVATE)
         val localOnly = prefs.getBoolean("local_only", false)
         val alwaysListen = prefs.getBoolean("always_listen", false)
+        if (!alwaysListen) return
         val wakeWord = prefs.getString("wake_word", "astra") ?: "astra"
-        wake.start(if (alwaysListen) "" else wakeWord, "auto") { command ->
+        controller.start("", "auto") { command ->
             if (command.isBlank()) return@start
             scope.launch {
-                val response = runCatching { runtime.handle(command, localOnly) }.getOrElse { "Astra error: ${it.message ?: "unknown error"}" }
-                wake.speakResponse(response)
+                val response = runCatching { runtime?.handle(command, localOnly) ?: "Astra is not ready." }.getOrElse { "Astra error: ${it.message ?: "unknown error"}" }
+                controller.speakResponse(response)
             }
         }
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
-    override fun onDestroy() { wake.stop(); wake.release(); scope.cancel(); super.onDestroy() }
+    override fun onDestroy() {
+        wake?.stop(); wake?.release(); wake = null
+        scope.cancel(); runtime = null
+        super.onDestroy()
+    }
     override fun onBind(intent: Intent?): IBinder? = null
 }
