@@ -1,4 +1,4 @@
-name: Build Astra APK
+name: Build Astra Unified APK
 
 on:
   push:
@@ -20,11 +20,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      - name: Build local and cloud debug APKs
+      - name: Build unified debug APK
         shell: bash
         run: |
           set +e
-          gradle assembleLocalDebug assembleCloudDebug --no-daemon --stacktrace 2>&1 | tee build.log
+          gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
           status=${PIPESTATUS[0]}
           exit $status
       - name: Upload build diagnostics
@@ -34,17 +34,10 @@ jobs:
           name: astra-build-diagnostics
           path: build.log
           if-no-files-found: warn
-      - name: Upload local-only APK
+      - name: Upload unified APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: astra-local-debug-apk
-          path: app/build/outputs/apk/local/debug/app-local-debug.apk
-          if-no-files-found: error
-      - name: Upload cloud-enabled APK
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: astra-cloud-debug-apk
-          path: app/build/outputs/apk/cloud/debug/app-cloud-debug.apk
+          name: astra-unified-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
