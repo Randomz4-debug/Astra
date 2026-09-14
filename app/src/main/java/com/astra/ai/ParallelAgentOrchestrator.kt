@@ -9,8 +9,8 @@ import org.json.JSONObject
 /** Runs independent sub-agent prompts concurrently and returns results in input order. */
 class ParallelAgentOrchestrator(context: Context) {
     private val appContext = context.applicationContext
-    suspend fun run(tasks: List<String>): List<String> = run(tasks.map { JSONObject().put("task", it) })
-    suspend fun run(tasks: List<JSONObject>): List<String> = coroutineScope {
+    suspend fun run(tasks: List<String>): List<String> = runSpecs(tasks.map { JSONObject().put("task", it) })
+    suspend fun runSpecs(tasks: List<JSONObject>): List<String> = coroutineScope {
         tasks.map { spec ->
             async {
                 val task = spec.optString("task")
