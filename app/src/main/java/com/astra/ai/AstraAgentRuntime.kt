@@ -14,6 +14,7 @@ class AstraAgentRuntime(context: Context) {
     private val prefs = appContext.getSharedPreferences("astra_runtime", Context.MODE_PRIVATE)
     private val providers = AiProviderRegistry(appContext)
     private val chats = AstraChatStore(appContext)
+    private val workspace = AstraWorkspace(appContext)
 
     suspend fun handle(input: String, localOnly: Boolean): String {
         val clean = input.trim()
@@ -68,12 +69,15 @@ class AstraAgentRuntime(context: Context) {
     private suspend fun generateModelAnswer(chatId: String, clean: String, localOnly: Boolean): String {
         val history = chats.recentMessages(chatId, oneYear = true, limit = 80)
         val historyText = if (history.isEmpty()) "(no earlier messages)" else history.dropLast(1).joinToString("\n") { "${if (it.role == "user") "USER" else "ASTRA"}: ${it.text}" }
+        val workspaceText = workspace.contextText()
         val toolCapabilities = """
 You are the reasoning brain inside the Android assistant Astra. The Android execution layer is part of the same assistant.
 Available capabilities include authorized app launching, opening arbitrary URLs in the browser, opening Maps, camera access/photo workflows, screen OCR/capture when permission is granted, accessibility UI actions when enabled, notifications/replies where Android exposes an action, phone calls where permitted, files/workspace, memory, local/LAN/cloud AI, and user-defined custom command workflows.
 Offline/online changes only the reasoning provider; they do not remove Astra's Android capabilities. If an action is exposed by Astra, do not claim the underlying model cannot do it. Use the appropriate execution layer when available, or state the exact permission/confirmation needed. Never claim an action succeeded unless Astra actually executed it.
+For multi-step requests, reason about the steps in order and use the execution layer for each step. Do not pretend a later step happened if an earlier step failed.
+Imported workspace files are supplied below when they are text-readable. Use them when answering questions about the user's uploaded files. Binary files remain stored for file operations but are not automatically converted to text.
 """.trimIndent()
-        val prompt = AstraPersona.systemPrompt(appContext) + "\n\n" + toolCapabilities + "\n\nRECENT ASTRA CHAT HISTORY (up to 1 year, current chat):\n" + historyText + "\n\nCURRENT USER REQUEST:\n" + clean
+        val prompt = AstraPersona.systemPrompt(appContext) + "\n\n" + toolCapabilities + "\n\nRECENT ASTRA CHAT HISTORY (up to 1 year, current chat):\n" + historyText + "\n\nIMPORTED ASTRA WORKSPACE:\n" + workspaceText + "\n\nCURRENT USER REQUEST:\n" + clean
         val mode = prefs.getString("ai_mode", "auto") ?: "auto"
         if (localOnly || mode == "offline") return localEngine.respond(prompt)
         if (mode == "online") return cloudOrLocal(prompt)
