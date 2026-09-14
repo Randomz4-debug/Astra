@@ -30,9 +30,7 @@ class MainActivity : ComponentActivity() {
     private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
     private val screenCapturePermission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val data = result.data ?: return@registerForActivityResult
-        if (screenCapture.attachResult(result.resultCode, data)) {
-            Toast.makeText(this, "Screen access enabled for this session", Toast.LENGTH_SHORT).show()
-        }
+        if (screenCapture.attachResult(result.resultCode, data)) Toast.makeText(this, "Screen access enabled for this session", Toast.LENGTH_SHORT).show()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,20 +45,13 @@ class MainActivity : ComponentActivity() {
     fun listen(language: String, result: (String) -> Unit, state: (Boolean) -> Unit) = voice.listen(language, result, state)
     fun stopListening() = voice.stop()
     fun speak(text: String, language: String) = voice.speak(text, language)
-
-    fun startBackground() {
-        if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(Intent(this, AstraForegroundService::class.java))
-        else startService(Intent(this, AstraForegroundService::class.java))
-    }
+    fun startBackground() { if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(Intent(this, AstraForegroundService::class.java)) else startService(Intent(this, AstraForegroundService::class.java)) }
     fun stopBackground() { stopService(Intent(this, AstraForegroundService::class.java)) }
     fun requestScreenAccess() { screenCapturePermission.launch(screenCapture.permissionIntent()) }
     fun captureScreen(onText: (String) -> Unit) {
         screenCapture.capture { bitmap ->
             if (bitmap == null) return@capture onText("Screen capture failed or permission was not granted.")
-            lifecycleScope.launch {
-                val text = LocalOcrEngine().read(bitmap)
-                onText(if (text.isBlank()) "No readable text was found on the screen." else text)
-            }
+            lifecycleScope.launch { val text = LocalOcrEngine().read(bitmap); onText(if (text.isBlank()) "No readable text was found on the screen." else text) }
         }
     }
     fun cameraOcr(onText: (String) -> Unit) {
@@ -68,24 +59,15 @@ class MainActivity : ComponentActivity() {
             if (!ok) return@bind onText("Camera could not be opened. Check camera permission.")
             camera.takePhoto { file ->
                 if (file == null) return@takePhoto onText("Photo capture failed.")
-                lifecycleScope.launch {
-                    val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath)
-                    val text = if (bitmap != null) LocalOcrEngine().read(bitmap) else ""
-                    onText(if (text.isBlank()) "Photo saved. No readable text was found." else text)
-                }
+                lifecycleScope.launch { val bitmap = android.graphics.BitmapFactory.decodeFile(file.absolutePath); val text = if (bitmap != null) LocalOcrEngine().read(bitmap) else ""; onText(if (text.isBlank()) "Photo saved. No readable text was found." else text) }
             }
         }
     }
     fun openAccessibilitySettings() = startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-    fun openNotificationSettings() = startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
+    fun openNotificationSettings() = startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
     fun openBatterySettings() = startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
     fun openOverlaySettings() = startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:$packageName")))
-
-    override fun onDestroy() {
-        screenCapture.release()
-        voice.release()
-        super.onDestroy()
-    }
+    override fun onDestroy() { screenCapture.release(); voice.release(); super.onDestroy() }
 }
 
 @Composable
@@ -93,38 +75,29 @@ fun AstraScreen(activity: MainActivity, vm: AstraViewModel = viewModel(factory =
     val ui by vm.ui.collectAsState()
     var input by remember { mutableStateOf("") }
     var language by remember { mutableStateOf("auto") }
+    var apiKey by remember { mutableStateOf("") }
     var listening by remember { mutableStateOf(false) }
     var info by remember { mutableStateOf("") }
 
     LaunchedEffect(ui.response) { if (ui.response.isNotBlank()) activity.speak(ui.response, language) }
 
-    Column(
-        Modifier.fillMaxSize().background(Color(0xFF08090D)).verticalScroll(rememberScrollState()).padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    Column(Modifier.fillMaxSize().background(Color(0xFF08090D)).verticalScroll(rememberScrollState()).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Spacer(Modifier.height(24.dp))
         Text("ASTRA", style = MaterialTheme.typography.displaySmall)
         Text(if (listening) "LISTENING" else ui.state.name, color = Color.LightGray)
         Spacer(Modifier.height(20.dp))
-        Box(Modifier.size(150.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = .16f), CircleShape), contentAlignment = Alignment.Center) {
-            Text("A", style = MaterialTheme.typography.displayLarge)
-        }
+        Box(Modifier.size(150.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = .16f), CircleShape), contentAlignment = Alignment.Center) { Text("A", style = MaterialTheme.typography.displayLarge) }
         Spacer(Modifier.height(12.dp))
         Text(ui.transcript, color = Color.LightGray)
         Text(ui.response)
-        if (info.isNotBlank()) {
-            Spacer(Modifier.height(8.dp))
-            Card(Modifier.fillMaxWidth()) { Text(info, Modifier.padding(12.dp)) }
-        }
+        if (info.isNotBlank()) { Spacer(Modifier.height(8.dp)); Card(Modifier.fillMaxWidth()) { Text(info, Modifier.padding(12.dp)) } }
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(language, { language = it }, Modifier.fillMaxWidth(), label = { Text("Language / BCP-47: auto, en-US, hi-IN...") }, singleLine = true)
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(input, { input = it }, Modifier.fillMaxWidth(), label = { Text("Talk, type, translate, or issue a command") })
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button({
-                if (listening) activity.stopListening() else activity.listen(language, { text -> input = text; vm.ask(text) }, { listening = it })
-            }, Modifier.weight(1f)) { Text(if (listening) "Stop" else "Listen") }
+            Button({ if (listening) activity.stopListening() else activity.listen(language, { text -> input = text; vm.ask(text) }, { listening = it }) }, Modifier.weight(1f)) { Text(if (listening) "Stop" else "Listen") }
             Button({ if (input.isNotBlank()) { vm.ask(input); input = "" } }, Modifier.weight(1f)) { Text("Send") }
         }
         Spacer(Modifier.height(8.dp))
@@ -142,13 +115,19 @@ fun AstraScreen(activity: MainActivity, vm: AstraViewModel = viewModel(factory =
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton({ activity.openOverlaySettings() }, Modifier.weight(1f)) { Text("Overlay") }
-            OutlinedButton({ info = "Local-only: ${ui.localOnly}\nNetwork: ${if (ui.localOnly) "blocked by provider policy" else "available for explicitly enabled cloud features"}\nAccessibility: enable manually\nNotification access: enable manually" }, Modifier.weight(1f)) { Text("Privacy") }
+            OutlinedButton({ info = "Local-only: ${ui.localOnly}\nCloud configured: ${ui.cloudConfigured}\nNetwork: ${if (ui.localOnly) "OFF" else "ON for explicitly selected cloud mode"}\nAccessibility: user-controlled\nNotification access: user-controlled" }, Modifier.weight(1f)) { Text("Privacy") }
         }
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.CenterVertically) { Switch(ui.localOnly, vm::setLocalOnly); Text("Local only") }
             Row(verticalAlignment = Alignment.CenterVertically) { Switch(ui.background, { checked -> vm.setBackground(checked); if (checked) activity.startBackground() else activity.stopBackground() }); Text("Background") }
         }
+        Spacer(Modifier.height(8.dp))
+        Text("Cloud mode is optional. The API key is encrypted with Android Keystore and is never hard-coded. Local mode never calls the cloud provider.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(apiKey, { apiKey = it }, Modifier.fillMaxWidth(), label = { Text("Optional OpenAI API key") }, singleLine = true)
+        Spacer(Modifier.height(6.dp))
+        Button({ vm.setOpenAiApiKey(apiKey); info = "Cloud credential saved in Android Keystore." }, Modifier.fillMaxWidth()) { Text("Save Cloud Key") }
         Spacer(Modifier.height(8.dp))
         Text("Astra never silently records audio, activates the camera, captures the screen, or bypasses Android security. Accessibility and notification access are user-enabled.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         Spacer(Modifier.height(24.dp))
