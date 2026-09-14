@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Astra</string>
+    <string name="accessibility_description">Astra accessibility service for user-directed UI automation.</string>
+</resources>
