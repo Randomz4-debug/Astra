@@ -3,10 +3,8 @@ package com.astra.ai
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -55,26 +53,24 @@ fun AstraApiPanel() {
         }.onFailure { status = "Could not save API: ${it.message}" }
     }
 
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 20.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        item {
-            Text("API HUB", style = MaterialTheme.typography.headlineMedium, color = Color.White)
-            Text("Add REST APIs directly inside Astra. No second app or launcher entry is needed.", color = Color.LightGray)
-            OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("API name") }, singleLine = true)
-            OutlinedTextField(description, { description = it }, Modifier.fillMaxWidth(), label = { Text("What this API does") }, singleLine = true)
-            OutlinedTextField(baseUrl, { baseUrl = it }, Modifier.fillMaxWidth(), label = { Text("Base URL") }, singleLine = true)
-            OutlinedTextField(path, { path = it }, Modifier.fillMaxWidth(), label = { Text("Default path") }, singleLine = true)
-            OutlinedTextField(method, { method = it }, Modifier.fillMaxWidth(), label = { Text("GET / POST / PUT / PATCH / DELETE") }, singleLine = true)
-            OutlinedTextField(headers, { headers = it }, Modifier.fillMaxWidth(), minLines = 3, label = { Text("Headers — one per line") })
-            OutlinedTextField(body, { body = it }, Modifier.fillMaxWidth(), minLines = 3, label = { Text("Default JSON/body (optional)") })
-            Button({ save() }, Modifier.fillMaxWidth()) { Text("Save API") }
-            if (status.isNotBlank()) Text(status, color = Color(0xFF69E6A5))
-        }
-        item { Text("CONFIGURED APIs", style = MaterialTheme.typography.titleLarge, color = Color.White) }
-        items(apis, key = { it.name }) { api ->
+        Text("API HUB", style = MaterialTheme.typography.headlineMedium, color = Color.White)
+        Text("Add REST APIs directly inside Astra. No second app or launcher entry is needed.", color = Color.LightGray)
+        OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("API name") }, singleLine = true)
+        OutlinedTextField(description, { description = it }, Modifier.fillMaxWidth(), label = { Text("What this API does") }, singleLine = true)
+        OutlinedTextField(baseUrl, { baseUrl = it }, Modifier.fillMaxWidth(), label = { Text("Base URL") }, singleLine = true)
+        OutlinedTextField(path, { path = it }, Modifier.fillMaxWidth(), label = { Text("Default path") }, singleLine = true)
+        OutlinedTextField(method, { method = it }, Modifier.fillMaxWidth(), label = { Text("GET / POST / PUT / PATCH / DELETE") }, singleLine = true)
+        OutlinedTextField(headers, { headers = it }, Modifier.fillMaxWidth(), minLines = 3, label = { Text("Headers — one per line") })
+        OutlinedTextField(body, { body = it }, Modifier.fillMaxWidth(), minLines = 3, label = { Text("Default JSON/body (optional)") })
+        Button({ save() }, Modifier.fillMaxWidth()) { Text("Save API") }
+        if (status.isNotBlank()) Text(status, color = Color(0xFF69E6A5))
+
+        Text("CONFIGURED APIs", style = MaterialTheme.typography.titleLarge, color = Color.White)
+        apis.forEach { api ->
             Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF11131B))) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(api.name, color = Color.White, style = MaterialTheme.typography.titleMedium)
@@ -91,7 +87,11 @@ fun AstraApiPanel() {
                             body = api.body
                             status = "Editing ${api.name}"
                         }, Modifier.weight(1f)) { Text("Edit") }
-                        OutlinedButton({ hub.delete(api.name); apis = hub.all(); status = "Deleted ${api.name}." }, Modifier.weight(1f)) { Text("Delete") }
+                        OutlinedButton({
+                            hub.delete(api.name)
+                            apis = hub.all()
+                            status = "Deleted ${api.name}."
+                        }, Modifier.weight(1f)) { Text("Delete") }
                     }
                 }
             }
