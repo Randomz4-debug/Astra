@@ -36,6 +36,7 @@ jobs:
           python tools/fix_siri_compile.py
           python tools/upgrade_advanced_settings.py
           python tools/fix_advanced_compile.py
+          python tools/fix_settings_persistence.py
       - name: Verify critical Astra features
         shell: bash
         run: |
@@ -47,6 +48,9 @@ jobs:
           grep -q 'AstraVoiceInteractionSessionService' app/src/main/res/xml/voice_interaction_service.xml
           grep -q 'onAudioAvailable' app/src/main/java/com/astra/ai/AstraVoiceInteractionSession.kt
           grep -q 'AstraAdvancedSettingsActivity' app/src/main/java/com/astra/ai/AstraMainActivity.kt
+          ! grep -q 'endpoint.contains(":12434")' app/src/main/java/com/astra/ai/AstraMainActivity.kt
+          grep -q 'local.endpoint()' app/src/main/java/com/astra/ai/AstraMainActivity.kt
+          grep -q 'local.configure(endpoint, model)' app/src/main/java/com/astra/ai/AstraMainActivity.kt
       - name: Build unified debug APK
         shell: bash
         run: |
