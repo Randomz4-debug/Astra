@@ -18,16 +18,24 @@ text = text.replace('''                localModels = localResult
                 discoveringModels = false
 ''')
 text = text.replace('''                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Button({ local.configure(endpoint, model); info = "Local AI settings saved." }, Modifier.weight(1f)) { Text("Save") }; OutlinedButton({ discoverAllModels() }, Modifier.weight(1f), enabled = !discoveringModels) { Text(if (discoveringModels) "Detecting…" else "Discover Models") } }
-''','''                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Button({ local.configure(endpoint, model); info = "Local AI settings saved." }, Modifier.weight(1f)); OutlinedButton({
-                        if (!discoveringModels) {
-                            discoveringModels = true; modelStatus = "Fetching local models…"
-                            a.lifecycleScope.launch(Dispatchers.IO) {
-                                val result = runCatching { local.discoverModels() }.getOrDefault(emptyList())
-                                val diagnosis = runCatching { local.diagnose() }.getOrDefault("Local discovery finished.")
-                                withContext(Dispatchers.Main) { localModels = result; modelStatus = "$diagnosis\\nDetected ${result.size} local model(s)"; discoveringModels = false }
+''','''                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { local.configure(endpoint, model); info = "Local AI settings saved." }, modifier = Modifier.weight(1f)) { Text("Save") }
+                        OutlinedButton(onClick = {
+                            if (!discoveringModels) {
+                                discoveringModels = true
+                                modelStatus = "Fetching local models…"
+                                a.lifecycleScope.launch(Dispatchers.IO) {
+                                    val result = runCatching { local.discoverModels() }.getOrDefault(emptyList())
+                                    val diagnosis = runCatching { local.diagnose() }.getOrDefault("Local discovery finished.")
+                                    withContext(Dispatchers.Main) {
+                                        localModels = result
+                                        modelStatus = "$diagnosis\\nDetected ${result.size} local model(s)"
+                                        discoveringModels = false
+                                    }
+                                }
                             }
-                        }
-                    }, Modifier.weight(1f), enabled = !discoveringModels) { Text(if (discoveringModels) "Fetching…" else "Fetch Local Models") } }
+                        }, modifier = Modifier.weight(1f), enabled = !discoveringModels) { Text(if (discoveringModels) "Fetching…" else "Fetch Local Models") }
+                    }
 ''')
 text = text.replace('FilterChip(model == item, { model = item; local.configure(endpoint, item) }, label = { Text(item) })','FilterChip(model == item, { model = item; local.configure(endpoint, item); localModels = emptyList(); modelStatus = "Selected local model: $item" }, label = { Text(item) })')
 text = text.replace('FilterChip(openAiModel == item, { openAiModel = item; openAi.setModel(item) }, label = { Text(item) })','FilterChip(openAiModel == item, { openAiModel = item; openAi.setModel(item); openAiModels = emptyList(); openAiStatus = "Selected OpenAI model: $item" }, label = { Text(item) })')
@@ -35,27 +43,55 @@ old = '''                    Row(Modifier.fillMaxWidth(), horizontalArrangement 
                     OutlinedTextField(openAiModel, { openAiModel = it }, Modifier.fillMaxWidth(), label = { Text("OpenAI model") }, singleLine = true, supportingText = { Text("Choose a detected model or enter one manually.") })
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { Button({ openAi.setModel(openAiModel); openAiStatus = "Model saved: ${openAiModel.trim()}" }, Modifier.weight(1f)) { Text("Save Model") }; OutlinedButton({ a.lifecycleScope.launch { openAiStatus = openAi.testConnection() } }, Modifier.weight(1f)) { Text("Test") } }
 '''
-new = '''                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedButton({ showOpenAiKey = !showOpenAiKey }, Modifier.weight(1f)) { Text(if (showOpenAiKey) "Hide Key" else "Show Key") }; Button({
-                        val value = openAiKey.trim()
-                        if (value.isBlank()) openAiStatus = "Enter an API key first." else a.lifecycleScope.launch(Dispatchers.IO) {
-                            runCatching { openAi.saveApiKey(value) }.onSuccess { withContext(Dispatchers.Main) { openAiKey = ""; openAiModels = emptyList(); openAiStatus = "API key saved. Models will only be fetched when you tap Fetch OpenAI Models." } }.onFailure { e -> withContext(Dispatchers.Main) { openAiStatus = "Could not save API key: ${e.message ?: "storage error"}" } }
-                        }
-                    }, Modifier.weight(1f)) { Text("Save Key") } }
-                    OutlinedTextField(openAiModel, { openAiModel = it }, Modifier.fillMaxWidth(), label = { Text("OpenAI model") }, singleLine = true, supportingText = { Text("Enter a model manually or use Fetch OpenAI Models.") })
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { Button({ openAi.setModel(openAiModel); openAiModels = emptyList(); openAiStatus = "Model saved: ${openAiModel.trim()}" }, Modifier.weight(1f)) { Text("Save Model") }; OutlinedButton({
-                        if (!discoveringModels) {
-                            discoveringModels = true; openAiStatus = "Fetching OpenAI models…"
-                            a.lifecycleScope.launch(Dispatchers.IO) {
-                                val result = runCatching { openAi.discoverModels() }.getOrDefault(emptyList())
-                                withContext(Dispatchers.Main) { openAiModels = result; discoveringModels = false; openAiStatus = if (result.isEmpty()) "No OpenAI models were returned. Check the key/network." else "Fetched ${result.size} OpenAI model(s)." }
+new = '''                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { showOpenAiKey = !showOpenAiKey }, modifier = Modifier.weight(1f)) { Text(if (showOpenAiKey) "Hide Key" else "Show Key") }
+                        Button(onClick = {
+                            val value = openAiKey.trim()
+                            if (value.isBlank()) {
+                                openAiStatus = "Enter an API key first."
+                            } else {
+                                a.lifecycleScope.launch(Dispatchers.IO) {
+                                    runCatching { openAi.saveApiKey(value) }
+                                        .onSuccess {
+                                            withContext(Dispatchers.Main) {
+                                                openAiKey = ""
+                                                openAiModels = emptyList()
+                                                openAiStatus = "API key saved. Models will only be fetched when you tap Fetch OpenAI Models."
+                                            }
+                                        }
+                                        .onFailure { e -> withContext(Dispatchers.Main) { openAiStatus = "Could not save API key: ${e.message ?: "storage error"}" } }
+                                }
                             }
+                        }, modifier = Modifier.weight(1f)) { Text("Save Key") }
+                    }
+                    OutlinedTextField(openAiModel, { openAiModel = it }, Modifier.fillMaxWidth(), label = { Text("OpenAI model") }, singleLine = true, supportingText = { Text("Enter a model manually or use Fetch OpenAI Models.") })
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { openAi.setModel(openAiModel); openAiModels = emptyList(); openAiStatus = "Model saved: ${openAiModel.trim()}" }, modifier = Modifier.weight(1f)) { Text("Save Model") }
+                        OutlinedButton(onClick = {
+                            if (!discoveringModels) {
+                                discoveringModels = true
+                                openAiStatus = "Fetching OpenAI models…"
+                                a.lifecycleScope.launch(Dispatchers.IO) {
+                                    val result = runCatching { openAi.discoverModels() }.getOrDefault(emptyList())
+                                    withContext(Dispatchers.Main) {
+                                        openAiModels = result
+                                        discoveringModels = false
+                                        openAiStatus = if (result.isEmpty()) "No OpenAI models were returned. Check the key/network." else "Fetched ${result.size} OpenAI model(s)."
+                                    }
+                                }
+                            }
+                        }, modifier = Modifier.weight(1f), enabled = !discoveringModels && openAi.hasApiKey()) { Text(if (discoveringModels) "Fetching…" else "Fetch OpenAI Models") }
+                    }
+                    OutlinedButton(onClick = {
+                        a.lifecycleScope.launch(Dispatchers.IO) {
+                            val result = openAi.testConnection()
+                            withContext(Dispatchers.Main) { openAiStatus = result }
                         }
-                    }, Modifier.weight(1f), enabled = !discoveringModels && openAi.hasApiKey()) { Text(if (discoveringModels) "Fetching…" else "Fetch OpenAI Models") } }
-                    OutlinedButton({ a.lifecycleScope.launch(Dispatchers.IO) { val result = openAi.testConnection(); withContext(Dispatchers.Main) { openAiStatus = result } } }, Modifier.fillMaxWidth(), enabled = !discoveringModels) { Text("Test OpenAI Connection") }
+                    }, modifier = Modifier.fillMaxWidth(), enabled = !discoveringModels) { Text("Test OpenAI Connection") }
 '''
 if old not in text:
     raise SystemExit('OpenAI UI block not found')
-text = text.replace(old,new)
+text = text.replace(old, new)
 MAIN.write_text(text, encoding='utf-8')
 
 text = CONN.read_text(encoding='utf-8')
@@ -65,11 +101,11 @@ new = '''selected?.let{i->AlertDialog(onDismissRequest={selected=null},title={Te
         Text("Available methods: ${i.methods.joinToString { it.name.replace('_',' ') }}")
         Text("Astra will not mark the app connected until a real connection or Android permission is established.")
     }},confirmButton={Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
-        if(manager.isInstalled(i)) Button({ manager.openApp(i); selected=null }){Text("Open App")}
-        if(i.website!=null) OutlinedButton({ manager.openWebsite(i); selected=null }){Text("Official Login")}
-    }},dismissButton={TextButton({selected=null}){Text("Cancel")}})}'''
+        if(manager.isInstalled(i)) Button(onClick={manager.openApp(i); selected=null}){Text("Open App")}
+        if(i.website!=null) OutlinedButton(onClick={manager.openWebsite(i); selected=null}){Text("Official Login")}
+    }},dismissButton={TextButton(onClick={selected=null}){Text("Cancel")}})}'''
 if old not in text:
     raise SystemExit('connection dialog block not found')
-text = text.replace(old,new)
+text = text.replace(old, new)
 CONN.write_text(text, encoding='utf-8')
 print('patched')
