@@ -22,11 +22,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun AstraApiPanel() {
-    val hub = remember { AstraApiHub(androidx.compose.ui.platform.LocalContext.current) }
+    val context = LocalContext.current
+    val hub = remember(context) { AstraApiHub(context) }
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var baseUrl by remember { mutableStateOf("") }
