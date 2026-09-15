@@ -15,6 +15,7 @@ A privacy-first Android assistant foundation based on the supplied Astra specifi
 - Permission-aware initial UI
 - Local-only and background settings
 - Unit-test foundation
+- Integrated REST API Hub in the main Astra navigation
 
 ## Important Android limitations
 
@@ -28,4 +29,4 @@ For a debug APK:
 
     ./gradlew assembleDebug
 
-The supplied specification requires later stages for real on-device STT, wake-word detection, OCR/vision, MediaProjection, notification access, messaging assistance, and OpenAI Realtime integration. Those integrations require concrete provider/model choices and Android-version-specific implementation/testing; they are intentionally not faked as complete functionality in this foundation.
+The current app includes the integrated API Hub, local/cloud model settings, voice controls, screen/accessibility controls, file and camera entry points, and chat history. Provider-specific features remain permission- and Android-version-dependent and are not falsely represented as unrestricted functionality.
