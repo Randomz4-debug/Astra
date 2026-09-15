@@ -27,10 +27,15 @@ class AstraCredentialVault(context: Context) {
         return gen.generateKey()
     }
     private fun encrypt(value:String):String {
-        val c=Cipher.getInstance("AES/GCM/NoPadding"); c.init(Cipher.ENCRYPT_MODE,ensureKey()); val out=ByteArray(c.iv.size+c.doFinal(value.toByteArray(StandardCharsets.UTF_8)).size); System.arraycopy(c.iv,0,out,0,c.iv.size); System.arraycopy(c.doFinal(value.toByteArray(StandardCharsets.UTF_8)),0,out,c.iv.size,out.size-c.iv.size); return Base64.encodeToString(out,Base64.NO_WRAP)
+        val c=Cipher.getInstance("AES/GCM/NoPadding"); c.init(Cipher.ENCRYPT_MODE,ensureKey())
+        val data=c.doFinal(value.toByteArray(StandardCharsets.UTF_8)); val out=ByteArray(c.iv.size+data.size)
+        System.arraycopy(c.iv,0,out,0,c.iv.size); System.arraycopy(data,0,out,c.iv.size,data.size)
+        return Base64.encodeToString(out,Base64.NO_WRAP)
     }
     private fun decrypt(value:String):String {
-        val raw=Base64.decode(value,Base64.NO_WRAP); val iv=raw.copyOfRange(0,12); val data=raw.copyOfRange(12,raw.size); val c=Cipher.getInstance("AES/GCM/NoPadding"); c.init(Cipher.DECRYPT_MODE,ensureKey(),GCMParameterSpec(128,iv)); return String(c.doFinal(data),StandardCharsets.UTF_8)
+        val raw=Base64.decode(value,Base64.NO_WRAP); require(raw.size>12)
+        val iv=raw.copyOfRange(0,12); val data=raw.copyOfRange(12,raw.size); val c=Cipher.getInstance("AES/GCM/NoPadding")
+        c.init(Cipher.DECRYPT_MODE,ensureKey(),GCMParameterSpec(128,iv)); return String(c.doFinal(data),StandardCharsets.UTF_8)
     }
     fun save(name:String,type:String,fields:Map<String,String>,id:String?=null):String {
         val arr=JSONArray(prefs.getString("items","[]")); val key=id ?: java.util.UUID.randomUUID().toString(); val out=JSONArray(); var replaced=false
@@ -39,6 +44,7 @@ class AstraCredentialVault(context: Context) {
         prefs.edit().putString("items",out.toString()).apply(); return key
     }
     fun list():List<Credential>{val arr=JSONArray(prefs.getString("items","[]"));return buildList{for(i in 0 until arr.length()){val o=arr.getJSONObject(i);val f=runCatching{JSONObject(decrypt(o.optString("secret")))}.getOrNull();val map=mutableMapOf<String,String>();f?.keys()?.forEach{map[it]=f.optString(it)};add(Credential(o.optString("id"),o.optString("name"),o.optString("type"),map))}}}
+    fun get(id:String):Credential?=list().firstOrNull{it.id==id}
     fun delete(id:String){val arr=JSONArray(prefs.getString("items","[]"));val out=JSONArray();for(i in 0 until arr.length())if(arr.getJSONObject(i).optString("id")!=id)out.put(arr.getJSONObject(i));prefs.edit().putString("items",out.toString()).apply()}
     fun clear(){prefs.edit().remove("items").apply()}
     fun redactedJson():String{val out=JSONArray();list().forEach{out.put(JSONObject().put("id",it.id).put("name",it.name).put("type",it.type).put("fields",it.fields.keys.joinToString(",")))};return out.toString()}
