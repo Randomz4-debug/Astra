@@ -19,7 +19,7 @@ text = text.replace('''                localModels = localResult
 ''')
 text = text.replace('''                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Button({ local.configure(endpoint, model); info = "Local AI settings saved." }, Modifier.weight(1f)) { Text("Save") }; OutlinedButton({ discoverAllModels() }, Modifier.weight(1f), enabled = !discoveringModels) { Text(if (discoveringModels) "Detecting…" else "Discover Models") } }
 ''','''                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { local.configure(endpoint, model); info = "Local AI settings saved." }, modifier = Modifier.weight(1f)) { Text("Save") }
+                        Button(onClick = { local.configure(endpoint, model); info = "Local AI settings saved." }, modifier = Modifier.weight(1f), content = { Text("Save") })
                         OutlinedButton(onClick = {
                             if (!discoveringModels) {
                                 discoveringModels = true
@@ -34,17 +34,17 @@ text = text.replace('''                    Row(horizontalArrangement = Arrangeme
                                     }
                                 }
                             }
-                        }, modifier = Modifier.weight(1f), enabled = !discoveringModels) { Text(if (discoveringModels) "Fetching…" else "Fetch Local Models") }
+                        }, modifier = Modifier.weight(1f), enabled = !discoveringModels, content = { Text(if (discoveringModels) "Fetching…" else "Fetch Local Models") })
                     }
 ''')
-text = text.replace('FilterChip(model == item, { model = item; local.configure(endpoint, item) }, label = { Text(item) })','FilterChip(model == item, { model = item; local.configure(endpoint, item); localModels = emptyList(); modelStatus = "Selected local model: $item" }, label = { Text(item) })')
-text = text.replace('FilterChip(openAiModel == item, { openAiModel = item; openAi.setModel(item) }, label = { Text(item) })','FilterChip(openAiModel == item, { openAiModel = item; openAi.setModel(item); openAiModels = emptyList(); openAiStatus = "Selected OpenAI model: $item" }, label = { Text(item) })')
+text = text.replace('FilterChip(model == item, { model = item; local.configure(endpoint, item) }, label = { Text(item) })','FilterChip(selected = model == item, onClick = { model = item; local.configure(endpoint, item); localModels = emptyList(); modelStatus = "Selected local model: $item" }, label = { Text(item) })')
+text = text.replace('FilterChip(openAiModel == item, { openAiModel = item; openAi.setModel(item) }, label = { Text(item) })','FilterChip(selected = openAiModel == item, onClick = { openAiModel = item; openAi.setModel(item); openAiModels = emptyList(); openAiStatus = "Selected OpenAI model: $item" }, label = { Text(item) })')
 old = '''                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedButton({ showOpenAiKey = !showOpenAiKey }, Modifier.weight(1f)) { Text(if (showOpenAiKey) "Hide Key" else "Show Key") }; Button({ openAi.saveApiKey(openAiKey); openAiKey = ""; openAiStatus = "API key saved securely on this device." }, Modifier.weight(1f)) { Text("Save Key") } }
                     OutlinedTextField(openAiModel, { openAiModel = it }, Modifier.fillMaxWidth(), label = { Text("OpenAI model") }, singleLine = true, supportingText = { Text("Choose a detected model or enter one manually.") })
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { Button({ openAi.setModel(openAiModel); openAiStatus = "Model saved: ${openAiModel.trim()}" }, Modifier.weight(1f)) { Text("Save Model") }; OutlinedButton({ a.lifecycleScope.launch { openAiStatus = openAi.testConnection() } }, Modifier.weight(1f)) { Text("Test") } }
 '''
 new = '''                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { showOpenAiKey = !showOpenAiKey }, modifier = Modifier.weight(1f)) { Text(if (showOpenAiKey) "Hide Key" else "Show Key") }
+                        OutlinedButton(onClick = { showOpenAiKey = !showOpenAiKey }, modifier = Modifier.weight(1f), content = { Text(if (showOpenAiKey) "Hide Key" else "Show Key") })
                         Button(onClick = {
                             val value = openAiKey.trim()
                             if (value.isBlank()) {
@@ -62,11 +62,11 @@ new = '''                    Row(Modifier.fillMaxWidth(), horizontalArrangement 
                                         .onFailure { e -> withContext(Dispatchers.Main) { openAiStatus = "Could not save API key: ${e.message ?: "storage error"}" } }
                                 }
                             }
-                        }, modifier = Modifier.weight(1f)) { Text("Save Key") }
+                        }, modifier = Modifier.weight(1f), content = { Text("Save Key") })
                     }
                     OutlinedTextField(openAiModel, { openAiModel = it }, Modifier.fillMaxWidth(), label = { Text("OpenAI model") }, singleLine = true, supportingText = { Text("Enter a model manually or use Fetch OpenAI Models.") })
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { openAi.setModel(openAiModel); openAiModels = emptyList(); openAiStatus = "Model saved: ${openAiModel.trim()}" }, modifier = Modifier.weight(1f)) { Text("Save Model") }
+                        Button(onClick = { openAi.setModel(openAiModel); openAiModels = emptyList(); openAiStatus = "Model saved: ${openAiModel.trim()}" }, modifier = Modifier.weight(1f), content = { Text("Save Model") })
                         OutlinedButton(onClick = {
                             if (!discoveringModels) {
                                 discoveringModels = true
@@ -80,18 +80,20 @@ new = '''                    Row(Modifier.fillMaxWidth(), horizontalArrangement 
                                     }
                                 }
                             }
-                        }, modifier = Modifier.weight(1f), enabled = !discoveringModels && openAi.hasApiKey()) { Text(if (discoveringModels) "Fetching…" else "Fetch OpenAI Models") }
+                        }, modifier = Modifier.weight(1f), enabled = !discoveringModels && openAi.hasApiKey(), content = { Text(if (discoveringModels) "Fetching…" else "Fetch OpenAI Models") })
                     }
                     OutlinedButton(onClick = {
                         a.lifecycleScope.launch(Dispatchers.IO) {
                             val result = openAi.testConnection()
                             withContext(Dispatchers.Main) { openAiStatus = result }
                         }
-                    }, modifier = Modifier.fillMaxWidth(), enabled = !discoveringModels) { Text("Test OpenAI Connection") }
+                    }, modifier = Modifier.fillMaxWidth(), enabled = !discoveringModels, content = { Text("Test OpenAI Connection") })
 '''
 if old not in text:
     raise SystemExit('OpenAI UI block not found')
 text = text.replace(old, new)
+# The local test button is kept explicit too; this removes any ambiguity with Material3 overloads.
+text = text.replace('OutlinedButton({ a.lifecycleScope.launch { modelStatus = local.diagnose() } }, Modifier.fillMaxWidth()) { Text("Test Local AI Connection") }', 'OutlinedButton(onClick = { a.lifecycleScope.launch(Dispatchers.IO) { val result = runCatching { local.diagnose() }.getOrDefault("Local AI test failed."); withContext(Dispatchers.Main) { modelStatus = result } } }, modifier = Modifier.fillMaxWidth(), content = { Text("Test Local AI Connection") })')
 MAIN.write_text(text, encoding='utf-8')
 
 text = CONN.read_text(encoding='utf-8')
@@ -101,9 +103,9 @@ new = '''selected?.let{i->AlertDialog(onDismissRequest={selected=null},title={Te
         Text("Available methods: ${i.methods.joinToString { it.name.replace('_',' ') }}")
         Text("Astra will not mark the app connected until a real connection or Android permission is established.")
     }},confirmButton={Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
-        if(manager.isInstalled(i)) Button(onClick={manager.openApp(i); selected=null}){Text("Open App")}
-        if(i.website!=null) OutlinedButton(onClick={manager.openWebsite(i); selected=null}){Text("Official Login")}
-    }},dismissButton={TextButton(onClick={selected=null}){Text("Cancel")}})}'''
+        if(manager.isInstalled(i)) Button(onClick={manager.openApp(i); selected=null}, content={Text("Open App")})
+        if(i.website!=null) OutlinedButton(onClick={manager.openWebsite(i); selected=null}, content={Text("Official Login")})
+    }},dismissButton={TextButton(onClick={selected=null}, content={Text("Cancel")})})}'''
 if old not in text:
     raise SystemExit('connection dialog block not found')
 text = text.replace(old, new)
