@@ -9,34 +9,74 @@ class AstraAgentRuntime(context: Context) {
     private val localEngine: AiEngine = LocalAiEngine(appContext)
     private val cloudEngine: AiEngine = OpenAiResponsesEngine(appContext)
     private val commands = LocalCommandEngine(appContext)
+    private val planner = AstraCommandPlanner(appContext)
     private val customCommands = AstraCustomCommandEngine(appContext)
     private val memory = MemoryManager(appContext)
     private val connectivity = AstraConnectivityManager(appContext)
     private val prefs = appContext.getSharedPreferences("astra_runtime", Context.MODE_PRIVATE)
     private val providers = AiProviderRegistry(appContext)
+    private val aiConfig = AstraAIConfigurationStore(appContext)
+    private val providerRouter = AstraAIProviderRouter(appContext)
     private val chats = AstraChatStore(appContext)
     private val workspace = AstraWorkspace(appContext)
     private val taskManager = AstraTaskManager(appContext)
     private val apiHub = AstraApiHub(appContext)
+    private val connectionTools = AstraConnectionTools(appContext)
 
     suspend fun handle(input: String, localOnly: Boolean): String {
         val clean = input.trim(); if (clean.isBlank()) return ""; val lower = clean.lowercase()
         if (lower == "api manager" || lower == "api settings" || lower == "manage apis" || lower == "open api manager" || lower == "open api settings") {
             return runCatching { appContext.startActivity(Intent(appContext, AstraApiActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); "Opening the Astra API Hub." }.getOrElse { "Could not open the API Hub: ${it.message}" }
         }
+        if (lower in setOf("what apps are connected", "show connected apps", "list connected apps", "connected apps")) {
+            val apps = connectionTools.getConnectedApps()
+            return if (apps.isBlank()) "No apps are connected to Astra." else "Connected apps: $apps"
+        }
+        if (lower == "connect app" || lower == "connect apps" || lower == "open connected apps") {
+            return runCatching { appContext.startActivity(Intent(appContext, AstraConnectedAppsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); "Opening Connected Apps." }.getOrElse { "Could not open Connected Apps: ${it.message}" }
+        }
+        if (lower.startsWith("open app ")) return connectionTools.openApp(clean.substringAfter("open app ").trim())
+        if (lower.startsWith("disconnect ")) return connectionTools.disconnect(clean.substringAfter("disconnect ").trim())
+
         val customResult = runCatching { customCommands.handle(clean) }.getOrNull(); if (customResult != null) return customResult.message
-        if (lower.startsWith("run in background ") || lower.startsWith("start background task ") || lower.startsWith("run task in background ")) { val prompt = clean.substringAfter("background", "").trim().removePrefix("task").trim(); if (prompt.isBlank()) return "Tell me what you want me to run in the background."; val id = taskManager.start(prompt); return "Background task $id started. I will execute its steps in order." }
-        if (lower == "list background tasks" || lower == "show background tasks" || lower == "tasks") { val all = taskManager.all(); return if (all.isEmpty()) "No background tasks." else all.joinToString("; ") { "${it.id}: ${it.status} ${it.step}/${it.total}" } }
-        if (lower.startsWith("stop background task ") || lower.startsWith("terminate background task ")) { val id = clean.substringAfterLast(' ').trim(); return if (taskManager.stop(id)) "Stopped background task $id." else "Background task $id was not running." }
-        val chatId = currentChatId(); chats.append(chatId, "user", clean)
+        if (lower.startsWith("run in background ") || lower.startsWith("start background task ") || lower.startsWith("run task in background ")) {
+            val prompt = clean.substringAfter("background", "").trim().removePrefix("task").trim()
+            if (prompt.isBlank()) return "Tell me what you want me to run in the background."
+            val id = taskManager.start(prompt); return "Background task $id started. I will execute its steps in order."
+        }
+        if (lower == "list background tasks" || lower == "show background tasks" || lower == "tasks") {
+            val all = taskManager.all(); return if (all.isEmpty()) "No background tasks." else all.joinToString("; ") { "${it.id}: ${it.status} ${it.step}/${it.total}" }
+        }
+        if (lower.startsWith("stop background task ") || lower.startsWith("terminate background task ")) {
+            val id = clean.substringAfterLast(' ').trim(); return if (taskManager.stop(id)) "Stopped background task $id." else "Background task $id was not running."
+        }
+
+        val chatId = currentChatId()
+        chats.append(chatId, "user", clean)
+
+        // Execute compound requests before the simple command router. This is the key fix for
+        // requests such as "open WhatsApp and read the last message...": opening the app is only
+        // step one, not the whole answer.
+        val planned = runCatching { planner.plan(clean) }.getOrNull()
+        if (planned?.handled == true) {
+            val finalAnswer = when {
+                !planned.toolFailure.isNullOrBlank() -> "I stopped because the required action failed: ${planned.toolFailure}"
+                !planned.reasoningRequest.isNullOrBlank() -> runCatching { generateModelAnswer(chatId, planned.reasoningRequest!!, localOnly) }
+                    .getOrElse { "I completed the available screen actions, but could not safely interpret the result: ${it.message ?: "unknown error"}" }
+                else -> "Done."
+            }
+            chats.append(chatId, "assistant", finalAnswer)
+            return finalAnswer
+        }
+
         val answer = try {
             when {
                 lower == "stop" || lower == "cancel" || lower == "astra stop" -> { customCommands.stopAll(); taskManager.stopAll(); "Stopped." }
                 lower.startsWith("call ") || lower.startsWith("dial ") -> { val target = clean.substringAfter(' ').trim(); commands.handle("call $target")?.message ?: "I could not start the call." }
                 lower.startsWith("rename yourself to ") || lower.startsWith("call yourself ") -> { val name = clean.substringAfter(" to ", "").trim().ifBlank { clean.substringAfter(' ').trim() }; if (name.isNotBlank()) { prefs.edit().putString("assistant_name", name).apply(); "Okay. From now on, I'm $name." } else "Please tell me the new name you want me to use." }
-                lower.startsWith("switch to offline") || lower == "use offline ai" || lower == "go offline" -> { prefs.edit().putString("ai_mode", "offline").apply(); "Switched to offline/local AI." }
-                lower.startsWith("switch to online") || lower == "use online ai" || lower == "go online" -> { prefs.edit().putString("ai_mode", "online").apply(); "Switched to online AI when internet is available." }
-                lower == "automatic mode" || lower == "auto ai" || lower == "use automatic ai" -> { prefs.edit().putString("ai_mode", "auto").apply(); "Automatic AI routing enabled." }
+                lower.startsWith("switch to offline") || lower == "use offline ai" || lower == "go offline" -> { aiConfig.setMode("offline"); "Switched to offline/local AI." }
+                lower.startsWith("switch to online") || lower == "use online ai" || lower == "go online" -> { aiConfig.setMode("online"); "Switched to online AI when internet is available." }
+                lower == "automatic mode" || lower == "auto ai" || lower == "use automatic ai" -> { aiConfig.setMode("auto"); "Automatic AI routing enabled." }
                 lower.startsWith("use model ") -> { val model = clean.substringAfter("use model ").trim(); val gateway = LocalAiGateway(appContext); gateway.configure(gateway.endpoint(), model); "Local model set to $model." }
                 lower.startsWith("use provider ") -> { val id = clean.substringAfter("use provider ").trim(); prefs.edit().putString("selected_provider", id).apply(); "Provider selection saved. If available, I'll use that provider." }
                 lower.startsWith("remember that ") -> { val body = clean.substringAfter("remember that "); val parts = body.split(" is ", limit = 2); if (parts.size == 2) { memory.remember(parts[0].trim(), parts[1].trim()); "I'll remember that locally." } else "Tell me what you want me to remember." }
@@ -50,9 +90,6 @@ class AstraAgentRuntime(context: Context) {
             }
         } catch (t: Throwable) { "Astra error: ${t.message ?: "unknown error"}" }
 
-        // Some small/local models can ignore the request and return the same canned greeting.
-        // Never show that greeting as the answer to an unrelated typed request. Retry once with
-        // an explicit request-focused prompt; if the model still fails, expose the real failure.
         var finalAnswer = answer
         if (isCannedGreeting(answer) && !isGreeting(clean)) {
             val retry = runCatching {
@@ -82,21 +119,26 @@ class AstraAgentRuntime(context: Context) {
     private suspend fun generateModelAnswer(chatId: String, clean: String, localOnly: Boolean): String {
         val history = chats.recentMessages(chatId, oneYear = true, limit = 80)
         val historyText = if (history.isEmpty()) "(no earlier messages)" else history.dropLast(1).joinToString("\n") { "${if (it.role == "user") "USER" else "ASTRA"}: ${it.text}" }
-        val workspaceText = workspace.contextText(); val screenText = AstraAccessibilityService.current()?.readScreen().orEmpty().trim().take(16000); val apiCatalog = apiHub.catalog()
+        val workspaceText = workspace.contextText()
+        val screenText = AstraAccessibilityService.current()?.readScreen().orEmpty().trim().take(16000)
+        val apiCatalog = apiHub.catalog()
+        val config = aiConfig.read()
+        val decision = providerRouter.decide()
         val toolCapabilities = """
-You are the reasoning brain inside the Android assistant Astra. The Android execution layer is part of the same assistant.
-Available capabilities include authorized app launching, opening URLs and Maps, camera/photo workflows, screen understanding and interaction when Accessibility Access is enabled, user-authorized screen capture, notifications/replies where Android exposes an action, phone calls where permitted, files/workspace, memory, local/LAN/cloud AI, and user-configured REST APIs.
-CUSTOM API ACCESS: Astra can call any number of user-configured REST APIs. API definitions are listed below. When a user asks to use one by name, the execution layer may perform the request. Do not invent API results. If an API is unavailable, say so.
-SCREEN ACCESS: The CURRENT SCREEN TEXT below is live accessibility information from the active window when available. Use it to answer screen questions. For interaction requests such as click, type, scroll, back, home, notifications or quick settings, the execution layer handles the action when Accessibility Access is enabled.
-Use practical human common sense: infer ordinary intent from context, resolve pronouns and references from recent messages and visible screen text, and ask a concise clarification only when a missing detail is genuinely required. Otherwise choose the safest reasonable interpretation. Understand normal conversational text, chats, notifications, UI labels, slang, typos and mixed-language phrasing. When reading chats/messages, distinguish sender, message content, controls and unrelated UI text; preserve the conversation's tone and context. For multi-step requests, make a short internal plan and execute only steps supported by available tools.
-Never claim an action succeeded unless Astra actually executed it. For multi-step requests, reason about the steps in order and do not pretend a later step happened if an earlier step failed.
-Imported workspace files are supplied below when they are text-readable. Binary files remain stored for file operations but are not automatically converted to text.
+You are the reasoning brain inside the Android assistant Astra. The Android execution layer is part of the same assistant and the same persisted chat/memory/settings state is used by the foreground app, background voice service and VoiceInteractionSession.
+Available capabilities include authorized app launching, opening URLs and Maps, camera/photo workflows, screen understanding and interaction when Accessibility Access is enabled, user-authorized screen capture, notifications/replies where Android exposes an action, phone calls where permitted, files/workspace, memory, local/LAN/cloud AI, Connected Apps and user-configured REST APIs.
+CUSTOM API ACCESS: Astra can call any number of user-configured REST APIs. API definitions are listed below. When a user asks to use one by name, the execution layer may perform the request. Do not invent API results.
+SCREEN ACCESS: CURRENT SCREEN TEXT below is live accessibility information from the active window when available. Use it as evidence, not as a guess. For interaction requests, the execution layer handles the action when Accessibility Access is enabled.
+CONNECTED APPS: A connection record means Astra has a legitimate connection/capability; opening an installed app is not the same thing as authenticating an account. Never claim an account is connected unless Astra's connection manager says it is connected.
+COMMON-SENSE EXECUTION: Infer ordinary intent from context, resolve pronouns and references from recent messages and visible screen text, understand slang/typos/mixed-language phrasing, and make a short plan for multi-step requests. Do not stop after the first successful step. Do not report an app-open action as the answer when the user asked for information from that app.
+MESSAGE READING: When reading a chat, distinguish sender, message content, timestamps, buttons, headers and unrelated UI text. Never invent a message. If the requested message is not visible or the sender cannot be verified, say so.
+TRUTHFULNESS: Never claim an action succeeded unless the execution layer reported success. Never claim you logged in, connected an account, read a private message, sent a message, or completed a UI action when Astra did not actually do it.
+PRIVACY: Use only explicitly authorized screen/accessibility/notification/camera capabilities. Do not expose unrelated private content.
+AI ROUTING: The selected Astra mode/provider policy below is authoritative and is shared by foreground/background/lock-screen clients. Current decision: ${decision.provider.name} (${decision.reason}). Configuration mode=${config.mode}, onlineProvider=${config.onlineProvider}, offlineProvider=${config.offlineProvider}, cloudProcessingAllowed=${config.cloudProcessingAllowed}.
 """.trimIndent()
         val prompt = AstraPersona.systemPrompt(appContext) + "\n\n" + toolCapabilities + "\n\nCONFIGURED REST APIS:\n" + apiCatalog + "\n\nCURRENT SCREEN TEXT:\n" + if (screenText.isBlank()) "(unavailable; Accessibility Access may be disabled)" else screenText + "\n\nRECENT ASTRA CHAT HISTORY (up to 1 year, current chat):\n" + historyText + "\n\nIMPORTED ASTRA WORKSPACE:\n" + workspaceText + "\n\nCURRENT USER REQUEST:\n" + clean
-        val mode = prefs.getString("ai_mode", "auto") ?: "auto"
-        if (localOnly || mode == "offline") return localEngine.respond(prompt)
-        if (mode == "online") return cloudOrLocal(prompt)
-        return if (connectivity.hasInternet()) cloudOrLocal(prompt) else localEngine.respond(prompt)
+        if (localOnly || decision.provider == AstraAIProviderRouter.Provider.OFFLINE) return localEngine.respond(prompt)
+        return cloudOrLocal(prompt)
     }
 
     fun currentChatId(): String { val existing = prefs.getString("current_chat_id", null); if (!existing.isNullOrBlank()) return existing; val chat = chats.ensureChat(title = "New chat"); prefs.edit().putString("current_chat_id", chat.id).apply(); return chat.id }
@@ -112,7 +154,10 @@ Imported workspace files are supplied below when they are text-readable. Binary 
 
     private suspend fun cloudOrLocal(prompt: String): String {
         val selected = prefs.getString("selected_provider", "")?.trim().orEmpty()
-        if (selected.isNotBlank()) { val answer = runCatching { providers.chat(selected, prompt) }.getOrNull(); if (!answer.isNullOrBlank() && !answer.startsWith("Provider unavailable")) return answer }
+        if (selected.isNotBlank()) {
+            val answer = runCatching { providers.chat(selected, prompt) }.getOrNull()
+            if (!answer.isNullOrBlank() && !answer.startsWith("Provider unavailable")) return answer
+        }
         val cloud = cloudEngine.respond(prompt)
         if (cloud == "OpenAI is unavailable right now." || cloud.startsWith("OpenAI request failed") || cloud == "OpenAI is not configured. Add your API key in Astra's cloud settings.") return localEngine.respond(prompt)
         return cloud
