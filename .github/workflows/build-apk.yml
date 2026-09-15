@@ -42,6 +42,7 @@ jobs:
           python tools/add_connection_commands.py
           python tools/fix_ai_model_ui_and_openai_lag.py
           python tools/add_automation_brain.py
+          python tools/fix_automation_compile.py
       - name: Verify critical Astra features
         shell: bash
         run: |
