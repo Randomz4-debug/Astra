@@ -18,15 +18,15 @@ Daemon will be stopped at the end of the build
 > Task :app:javaPreCompileDebug
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
+> Task :app:processDebugManifestForPackage
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
-> Task :app:processDebugManifestForPackage
 > Task :app:desugarDebugFileDependencies
 > Task :app:compressDebugAssets
 > Task :app:mergeDebugJniLibFolders
 > Task :app:checkDebugDuplicateClasses
-> Task :app:mergeDebugNativeLibs
 > Task :app:processDebugResources
+> Task :app:mergeDebugNativeLibs
 > Task :app:mergeLibDexDebug
 
 > Task :app:stripDebugDebugSymbols
@@ -37,15 +37,9 @@ Unable to strip the following libraries, packaging them as they are: libandroidx
 > Task :app:writeDebugSigningConfigVersions
 > Task :app:mergeExtDexDebug
 
-> Task :app:compileDebugKotlin
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAccessibilityService.kt:65:33 Incorrect character literal.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAccessibilityService.kt:65:34 Syntax error: Expecting ','.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAccessibilityService.kt:66:1 Incorrect character literal.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAccessibilityService.kt:66:3 Syntax error: Expecting ')'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAgentRuntime.kt:25:66 Too many arguments for 'constructor(): AstraPromptTranslationService'.
-
 > Task :app:compileDebugKotlin FAILED
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789487591473.json
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAgentRuntime.kt:25:66 Too many arguments for 'constructor(): AstraPromptTranslationService'.
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789487722207.json
 
 FAILURE: Build failed with an exception.
 
@@ -249,5 +243,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 45s
+BUILD FAILED in 49s
 28 actionable tasks: 28 executed
