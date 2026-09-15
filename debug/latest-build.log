@@ -15,38 +15,37 @@ Daemon will be stopped at the end of the build
 > Task :app:parseDebugLocalResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
-> Task :app:processDebugManifestForPackage
 > Task :app:javaPreCompileDebug
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
 > Task :app:desugarDebugFileDependencies
-> Task :app:mergeDebugJniLibFolders
 > Task :app:compressDebugAssets
+> Task :app:mergeDebugJniLibFolders
+> Task :app:processDebugManifestForPackage
 > Task :app:checkDebugDuplicateClasses
 > Task :app:processDebugResources
-> Task :app:mergeDebugNativeLibs
 > Task :app:mergeLibDexDebug
-
-> Task :app:stripDebugDebugSymbols
-Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libimage_processing_util_jni.so, liblanguage_id_l2c_jni.so, libmlkit_google_ocr_pipeline.so, libsurface_util_jni.so, libtranslate_jni.so.
-
+> Task :app:mergeDebugNativeLibs
 > Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
 > Task :app:writeDebugSigningConfigVersions
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libimage_processing_util_jni.so, liblanguage_id_l2c_jni.so, libmlkit_google_ocr_pipeline.so, libmlkitcommonpipeline.so, libsurface_util_jni.so, libtranslate_jni.so.
+
 > Task :app:mergeExtDexDebug
 
 > Task :app:compileDebugKotlin FAILED
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAccessibilityService.kt:169:37 Syntax error: Expecting ','.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAccessibilityService.kt:170:9 'if' must have both main and 'else' branches when used as an expression.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAccessibilityService.kt:170:9 Too many arguments for 'fun dispatchGesture(p0: GestureDescription, p1: AccessibilityService.GestureResultCallback?, p2: Handler?): Boolean'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAccessibilityService.kt:170:13 Unresolved reference 'ok'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAccessibilityService.kt:170:89 Syntax error: Expecting ','.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAccessibilityService.kt:171:9 Too many arguments for 'fun dispatchGesture(p0: GestureDescription, p1: AccessibilityService.GestureResultCallback?, p2: Handler?): Boolean'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAccessibilityService.kt:171:16 Unresolved reference 'ok'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAccessibilityService.kt:171:18 Syntax error: Expecting ')'.
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789491971683.json
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:132:97 Unresolved reference 't'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:133:38 Unresolved reference 'lower'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:133:63 Unresolved reference 'lower'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:133:90 Unresolved reference 'lower'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:133:116 Unresolved reference 'lower'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:133:144 Unresolved reference 'lower'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:133:171 Unresolved reference 'lower'.
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789491999615.json
 
 FAILURE: Build failed with an exception.
 
@@ -250,5 +249,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 42s
+BUILD FAILED in 1m 1s
 28 actionable tasks: 28 executed
