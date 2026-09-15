@@ -20,32 +20,32 @@ Daemon will be stopped at the end of the build
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
+> Task :app:processDebugManifestForPackage
 > Task :app:desugarDebugFileDependencies
 > Task :app:compressDebugAssets
-> Task :app:processDebugManifestForPackage
 > Task :app:mergeDebugJniLibFolders
 > Task :app:checkDebugDuplicateClasses
-> Task :app:mergeLibDexDebug
 > Task :app:mergeDebugNativeLibs
 > Task :app:processDebugResources
-> Task :app:validateSigningDebug
-> Task :app:writeDebugAppMetadata
-> Task :app:writeDebugSigningConfigVersions
+> Task :app:mergeLibDexDebug
 
 > Task :app:stripDebugDebugSymbols
 Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libimage_processing_util_jni.so, liblanguage_id_l2c_jni.so, libmlkit_google_ocr_pipeline.so, libsurface_util_jni.so, libtranslate_jni.so.
 
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
 > Task :app:mergeExtDexDebug
 
-> Task :app:compileDebugKotlin FAILED
+> Task :app:compileDebugKotlin
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAccessibilityService.kt:65:33 Incorrect character literal.
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAccessibilityService.kt:65:34 Syntax error: Expecting ','.
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAccessibilityService.kt:66:1 Incorrect character literal.
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAccessibilityService.kt:66:3 Syntax error: Expecting ')'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAgentRuntime.kt:110:13 Unresolved reference 'shouldUseMultiAgent'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraPromptTranslationService.kt:6:38 Unresolved reference 'DownloadConditions'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraPromptTranslationService.kt:39:30 Unresolved reference 'DownloadConditions'.
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789487575483.json
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAgentRuntime.kt:25:66 Too many arguments for 'constructor(): AstraPromptTranslationService'.
+
+> Task :app:compileDebugKotlin FAILED
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789487591473.json
 
 FAILURE: Build failed with an exception.
 
@@ -249,5 +249,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 46s
+BUILD FAILED in 45s
 28 actionable tasks: 28 executed
