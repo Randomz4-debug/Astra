@@ -4,5 +4,5 @@ import android.service.voice.VoiceInteractionSession
 import android.service.voice.VoiceInteractionSessionService
 
 class AstraVoiceInteractionSessionService : VoiceInteractionSessionService() {
-    override fun onNewSession(args: android.os.Bundle?): VoiceInteractionSession = AstraVoiceInteractionSession(this)
+    override fun onNewSession(args: android.os.Bundle?): VoiceInteractionSession = AstraSiriVoiceInteractionSession(this)
 }
