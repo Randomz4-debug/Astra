@@ -52,6 +52,7 @@ jobs:
           python tools/fix_openai_ui_and_compile.py
           python tools/upgrade_screen_agent_translation.py
           python tools/fix_screen_agent_compile.py
+          python tools/final_realtime_upgrade.py
       - name: Verify critical Astra features
         shell: bash
         run: |
@@ -73,10 +74,12 @@ jobs:
           test -f app/src/main/java/com/astra/ai/AstraMultiAgentRuntime.kt
           test -f app/src/main/java/com/astra/ai/AstraSiriVoiceInteractionSession.kt
           test -f app/src/main/java/com/astra/ai/AstraPromptTranslationService.kt
+          test -f app/src/main/java/com/astra/ai/AstraRealtimeCore.kt
           test -f tools/final_ui_performance_cleanup.py
           test -f tools/fix_openai_ui_and_compile.py
           test -f tools/upgrade_screen_agent_translation.py
           test -f tools/fix_screen_agent_compile.py
+          test -f tools/final_realtime_upgrade.py
           grep -q 'AstraConnectedAppsActivity' app/src/main/AndroidManifest.xml
           grep -q 'AstraAutomationActivity' app/src/main/AndroidManifest.xml
           grep -q 'AstraAutomationReceiver' app/src/main/AndroidManifest.xml
@@ -85,7 +88,6 @@ jobs:
           grep -q 'AstraAgenticExecutor' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraMultiAgentRuntime' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraCommandPlanner' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
-          grep -q 'AstraAIProviderRouter' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraAutomationEngine' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraAutomationActivity' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraPromptTranslationService' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
