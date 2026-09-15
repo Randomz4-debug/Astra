@@ -33,7 +33,6 @@ jobs:
           python tools/upgrade_lan_web_ui.py
           python tools/upgrade_siri_orb.py
           python tools/fix_siri_compile.py
-          python tools/add_credentials_vault.py
       - name: Build unified debug APK
         shell: bash
         run: |
@@ -48,17 +47,20 @@ jobs:
           name: astra-build-diagnostics
           path: build.log
           if-no-files-found: warn
-      - name: Persist failed build log for debugging
+      - name: Persist failed build log through GitHub API
         if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          mkdir -p debug
-          cp build.log debug/latest-build.log
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add debug/latest-build.log
-          git diff --cached --quiet || git commit -m "debug: persist failed build log [skip ci]"
-          git push
+          set -e
+          encoded=$(base64 -w0 build.log)
+          sha=$(gh api "repos/${GITHUB_REPOSITORY}/contents/debug/latest-build.log" --jq '.sha' 2>/dev/null || true)
+          if [ -n "$sha" ]; then
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/debug/latest-build.log" -f message='debug: update failed build log [skip ci]' -f content="$encoded" -f sha="$sha" -f branch="$GITHUB_REF_NAME" >/dev/null
+          else
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/debug/latest-build.log" -f message='debug: persist failed build log [skip ci]' -f content="$encoded" -f branch="$GITHUB_REF_NAME" >/dev/null
+          fi
       - name: Upload unified APK
         if: success()
         uses: actions/upload-artifact@v4
