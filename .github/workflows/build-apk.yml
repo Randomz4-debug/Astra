@@ -39,6 +39,7 @@ jobs:
           python tools/fix_settings_persistence.py
           python tools/fix_persistent_settings_and_connections.py
           python tools/harden_ai_routing_and_settings.py
+          python tools/add_connection_commands.py
       - name: Verify critical Astra features
         shell: bash
         run: |
@@ -46,7 +47,10 @@ jobs:
           test -f app/src/main/java/com/astra/ai/LiveAgentSession.kt
           test -f app/src/main/java/com/astra/ai/AstraCredentialVault.kt
           test -f app/src/main/java/com/astra/ai/AstraConnectionManager.kt
+          test -f app/src/main/java/com/astra/ai/AstraConnectionTools.kt
           test -f app/src/main/java/com/astra/ai/AstraOAuthManager.kt
+          test -f app/src/main/java/com/astra/ai/AstraAIConfiguration.kt
+          test -f app/src/main/java/com/astra/ai/AstraAIProviderRouter.kt
           test -f app/src/main/java/com/astra/ai/AstraConnectedAppsActivity.kt
           test -f app/src/main/java/com/astra/ai/AstraAdvancedSettingsActivity.kt
           grep -q 'AstraConnectedAppsActivity' app/src/main/AndroidManifest.xml
