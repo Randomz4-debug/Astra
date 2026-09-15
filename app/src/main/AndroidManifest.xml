@@ -23,12 +23,7 @@
         </activity>
         <activity android:name=".AstraChatActivity" android:exported="false" android:label="Astra Chat"/>
         <activity android:name=".AstraFilePickerActivity" android:exported="false" android:label="Astra File"/>
-        <activity android:name=".AstraApiActivity" android:exported="true" android:label="Astra API Hub">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-        </activity>
+        <activity android:name=".AstraApiActivity" android:exported="false" android:label="Astra API Hub" />
         <activity android:name=".AstraCameraActivity" android:exported="false" android:screenOrientation="portrait" android:label="Astra Camera"/>
         <activity android:name=".AstraCustomCommandsActivity" android:exported="false" android:label="Astra Custom Commands"/>
         <activity android:name=".AstraWebActivity" android:exported="false" android:label="Astra Web UI"/>

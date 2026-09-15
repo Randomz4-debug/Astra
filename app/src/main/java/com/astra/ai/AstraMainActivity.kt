@@ -187,7 +187,7 @@ private fun AstraHome(a: AstraMainActivity, vm: AstraViewModel = viewModel(facto
             NavigationBarItem(page == 0, { page = 0 }, icon = { Text("●") }, label = { Text("Chat") })
             NavigationBarItem(page == 1, { page = 1 }, icon = { Text("⚙") }, label = { Text("Settings") })
             NavigationBarItem(page == 2, { page = 2 }, icon = { Text("🔐") }, label = { Text("Access") })
-            NavigationBarItem(page == 3, { page = 3 }, icon = { Text("▣") }, label = { Text("Chats") })
+            NavigationBarItem(page == 3, { page = 3 }, icon = { Text("⌘") }, label = { Text("APIs") })
         } }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad).padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 20.dp)) {
             item {
@@ -251,7 +251,11 @@ private fun AstraHome(a: AstraMainActivity, vm: AstraViewModel = viewModel(facto
                 item { Text("CAMERA", color = Color.White, style = MaterialTheme.typography.titleMedium); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedButton({ a.openCamera(false) }, Modifier.weight(1f)) { Text("Back + Capture") }; OutlinedButton({ a.openCamera(true) }, Modifier.weight(1f)) { Text("Front + Capture") } }; Text("Astra Camera can flip, capture and open the saved photo in Gallery.", color = Color.Gray) }
                 item { Text("SYSTEM", color = Color.White, style = MaterialTheme.typography.titleMedium); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedButton({ a.openBattery() }, Modifier.weight(1f)) { Text("Battery") }; OutlinedButton({ a.openOverlay() }, Modifier.weight(1f)) { Text("Overlay") } } }
             }
-            if (page == 3) { item { Text("CHAT HISTORY", color = Color.White, style = MaterialTheme.typography.titleMedium); Button({ runtime.newChat(); info = "New chat created." }, Modifier.fillMaxWidth()) { Text("New chat") } }; items(chatStore.listChats(), key = { it.id }) { c -> Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF11131B))) { Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) { Text(c.title, color = Color.White, Modifier.weight(1f)); TextButton({ runtime.selectChat(c.id) }) { Text("Open") } } } } }
+            if (page == 3) {
+    item { AstraApiPanel() }
+    item { Text("CHAT HISTORY", color = Color.White, style = MaterialTheme.typography.titleMedium); Button({ runtime.newChat(); info = "New chat created." }, Modifier.fillMaxWidth()) { Text("New chat") } }
+    items(chatStore.listChats(), key = { it.id }) { c -> Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF11131B))) { Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) { Text(c.title, color = Color.White, Modifier.weight(1f)); TextButton({ runtime.selectChat(c.id) }) { Text("Open") } } } }
+}
             if (info.isNotBlank()) item { Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1015))) { Text(info, Modifier.padding(12.dp), color = Color.White) } }
         }
     }
