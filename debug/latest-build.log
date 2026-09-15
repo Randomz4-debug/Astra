@@ -11,14 +11,14 @@ Daemon will be stopped at the end of the build
 > Task :app:packageDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
-> Task :app:parseDebugLocalResources
 > Task :app:mergeDebugResources
+> Task :app:parseDebugLocalResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
 > Task :app:javaPreCompileDebug
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
-> Task :app:processDebugManifestForPackage
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
 > Task :app:desugarDebugFileDependencies
@@ -38,9 +38,9 @@ Unable to strip the following libraries, packaging them as they are: libandroidx
 > Task :app:mergeExtDexDebug
 
 > Task :app:compileDebugKotlin FAILED
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAgentRuntime.kt:53:42 Unsupported escape sequence.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAgentRuntime.kt:53:46 Unsupported escape sequence.
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789477789906.json
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraSiriVoiceInteractionSession.kt:71:59 Unresolved reference 'hintTextColor'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraSiriVoiceInteractionSession.kt:127:680 Argument type mismatch: actual type is 'Double', but 'Float' was expected.
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789478435898.json
 
 FAILURE: Build failed with an exception.
 
@@ -302,5 +302,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 30s
+BUILD FAILED in 43s
 28 actionable tasks: 28 executed
