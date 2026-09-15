@@ -1,9 +1,12 @@
 from pathlib import Path
+import re
 
-# Fix Kotlin escape sequences introduced by the agent-brain source patch.
+# The agent upgrade script can leave Kotlin regex whitespace escapes as a single
+# backslash (\s), which is invalid in a normal Kotlin string literal.
 runtime = Path("app/src/main/java/com/astra/ai/AstraAgentRuntime.kt")
 s = runtime.read_text(encoding="utf-8")
-s = s.replace('Regex("\\s+")', 'Regex("""\\s+""")')
+# Convert only a single backslash before s to a Kotlin-safe double backslash.
+s = re.sub(r'(?<!\\)\\s', r'\\\\s', s)
 runtime.write_text(s, encoding="utf-8")
 
 # Give recursive JSON-builder functions explicit return types so Kotlin's
