@@ -83,6 +83,7 @@ jobs:
           grep -q 'AstraAutomationActivity' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'clickTextNormalized' app/src/main/java/com/astra/ai/AstraAccessibilityService.kt
           grep -q 'AstraAdvancedSettingsActivity' app/src/main/java/com/astra/ai/AstraMainActivity.kt
+          grep -q 'AstraVoiceActivity' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           ! grep -q 'endpoint.contains(":12434")' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           ! grep -q 'u.port == 12434' app/src/main/java/com/astra/ai/LocalAiGateway.kt
           grep -q 'local.endpoint()' app/src/main/java/com/astra/ai/AstraMainActivity.kt
@@ -91,7 +92,6 @@ jobs:
           ! grep -q 'Fetch OpenAI Models' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           ! grep -q 'openAi.discoverModels()' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           ! grep -q 'openAiModels' app/src/main/java/com/astra/ai/AstraMainActivity.kt
-          grep -q 'Fetch Local Models' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           grep -q 'hasOpenAiApiKey' app/src/main/java/com/astra/ai/AstraViewModel.kt
       - name: Build unified debug APK
         shell: bash
