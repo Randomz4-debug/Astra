@@ -8,12 +8,13 @@ import android.service.voice.VoiceInteractionSession
 class AstraVoiceInteractionService : VoiceInteractionService() {
     override fun onReady() {
         super.onReady()
+        if (android.os.Build.VERSION.SDK_INT >= 36) {
+            runCatching { setInvocationEffectEnabled(true) }
+        }
     }
 
     override fun onLaunchVoiceAssistFromKeyguard() {
         super.onLaunchVoiceAssistFromKeyguard()
-        // VoiceInteractionService is one of Android's privileged background-to-UI launch paths.
-        // Show the real VoiceInteractionSession instead of starting a normal background service.
         runCatching {
             showSession(Bundle().apply { putBoolean("astra_keyguard", true) }, VoiceInteractionSession.SHOW_WITH_ASSIST)
         }
