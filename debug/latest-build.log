@@ -9,44 +9,80 @@ Daemon will be stopped at the end of the build
 > Task :app:mapDebugSourceSetPaths
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
+> Task :app:mergeDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
 > Task :app:parseDebugLocalResources
-> Task :app:mergeDebugResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
 > Task :app:javaPreCompileDebug
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
-> Task :app:mergeDebugAssets
 > Task :app:processDebugManifestForPackage
+> Task :app:mergeDebugAssets
 > Task :app:desugarDebugFileDependencies
-> Task :app:mergeDebugJniLibFolders
 > Task :app:compressDebugAssets
-> Task :app:checkDebugDuplicateClasses
-> Task :app:mergeDebugNativeLibs
 > Task :app:processDebugResources
-> Task :app:mergeLibDexDebug
-
-> Task :app:stripDebugDebugSymbols
-Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libimage_processing_util_jni.so, liblanguage_id_l2c_jni.so, libmlkit_google_ocr_pipeline.so, libsurface_util_jni.so, libtranslate_jni.so.
-
-> Task :app:validateSigningDebug
-> Task :app:writeDebugAppMetadata
-> Task :app:writeDebugSigningConfigVersions
+> Task :app:checkDebugDuplicateClasses
+> Task :app:compileDebugKotlin
 > Task :app:mergeExtDexDebug
 
-> Task :app:compileDebugKotlin
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:282:74 Unresolved reference 'openAiModels'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:282:89 Cannot infer type for this parameter. Specify it explicitly.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:282:89 Not enough information to infer type argument for 'T'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:291:76 Unresolved reference 'openAiModels'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:291:91 Cannot infer type for this parameter. Specify it explicitly.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:291:91 Not enough information to infer type argument for 'T'.
-
 > Task :app:compileDebugKotlin FAILED
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789484546781.json
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:220:25 Inapplicable candidate(s): fun OutlinedButton(onClick: () -> Unit, modifier: Modifier = ..., enabled: Boolean = ..., shape: Shape = ..., colors: ButtonColors = ..., elevation: ButtonElevation? = ..., border: BorderStroke? = ..., contentPadding: PaddingValues = ..., interactionSource: MutableInteractionSource? = ..., content: @Composable() ComposableFunction1<RowScope, Unit>): Unit
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:234:102 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:235:21 'if' must have both main and 'else' branches when used as an expression.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:235:51 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:235:116 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:236:21 Unresolved reference 'OutlinedButton'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:236:36 Unresolved reference 'onClick'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:236:36 Only expressions are allowed in this context.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:236:233 Syntax error: Expecting ')'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:236:271 No parameter with name 'content' found.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:236:271 No value passed for parameter 'color'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:236:283 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:238:17 Unresolved reference 'item'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:239:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:239:79 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:240:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:240:177 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:241:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:242:21 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:243:130 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:243:135 Syntax error: Expecting an argument.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:243:169 No parameter with name 'content' found.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:243:169 No value passed for parameter 'text'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:243:169 No value passed for parameter 'color'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:243:181 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:245:21 Unresolved reference 'OutlinedTextField'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:245:50 Syntax error: Expecting ')'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:245:68 Unresolved reference 'it'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:245:99 No parameter with name 'label' found.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:245:109 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:245:133 No parameter with name 'singleLine' found.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:245:152 No parameter with name 'supportingText' found.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:245:171 @Composable invocations can only happen from the context of a @Composable function
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:258:17 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:259:17 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:266:17 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:271:17 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:272:17 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:273:14 Syntax error: Expecting ','.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:274:13 'if' must have both main and 'else' branches when used as an expression.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:275:17 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:276:17 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:277:17 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:278:14 Syntax error: Expecting ','.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:279:13 'if' must have both main and 'else' branches when used as an expression.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:280:5 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:281:5 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:282:5 'fun <T> LazyListScope.items(items: List<T>, noinline key: ((@ParameterName(...) T) -> Any)? = ..., noinline contentType: (@ParameterName(...) T) -> Any? = ..., crossinline itemContent: @Composable() ComposableFunction2<LazyItemScope, @ParameterName(...) T, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:283:2 Syntax error: Expecting ','.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:284:13 'if' must have both main and 'else' branches when used as an expression.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:284:36 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:284:205 Syntax error: Expecting ')'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:287:2 Syntax error: Expecting '}'.
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789484812631.json
 
 FAILURE: Build failed with an exception.
 
@@ -250,5 +286,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 44s
-28 actionable tasks: 28 executed
+BUILD FAILED in 2m 40s
+21 actionable tasks: 21 executed
