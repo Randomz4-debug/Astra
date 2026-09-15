@@ -4,11 +4,9 @@ import re
 p = Path("app/src/main/java/com/astra/ai/AstraTooling.kt")
 s = p.read_text(encoding="utf-8")
 
-# Android system timer support.
 if "import android.provider.AlarmClock" not in s:
     s = s.replace("import android.provider.Settings\n", "import android.provider.Settings\nimport android.provider.AlarmClock\n")
 
-# Deterministic timer execution: actually start the Android timer instead of only opening Clock.
 if "fun timer(seconds: Int" not in s:
     marker = "    fun maps(query: String): ToolResult ="
     i = s.find(marker)
@@ -41,7 +39,8 @@ if '"setTimer" -> device.timer' not in s:
         raise SystemExit("ToolRouter execution marker not found")
     s = s.replace(needle, repl)
 
-# Hardened parser lives inside LocalCommandEngine.handle(), where t/lower are defined.
+# Deterministic timer parser. Keep the Kotlin regex patterns free of unsupported
+# backslash escapes so this generated source compiles with Kotlin string literals.
 if "ASTRA_TIMER_HARDENED" not in s:
     marker = '        if (lower == "custom commands" || lower == "open custom commands"'
     i = s.find(marker)
@@ -49,12 +48,12 @@ if "ASTRA_TIMER_HARDENED" not in s:
         raise SystemExit("LocalCommandEngine insertion marker not found")
     block = '''        // ASTRA_TIMER_HARDENED: deterministic timer commands bypass the LLM.
         val timerSeconds = run {
-            val compact = lower.replace(Regex("\\\\s*-\\\\s*"), "-")
-            val hhmm = Regex("(?:timer|countdown).*?(\\\\d{1,2}):(\\\\d{2})").find(compact)
+            val compact = lower.replace(" ", "")
+            val hhmm = Regex("(?:timer|countdown).*?([0-9]{1,2}):([0-9]{2})").find(compact)
             if (hhmm != null) {
                 (hhmm.groupValues[1].toInt() * 60 + hhmm.groupValues[2].toInt()).coerceAtLeast(1)
             } else {
-                val m = Regex("(\\\\d+(?:\\\\.\\\\d+)?)\\\\s*(?:-|\\\\s)?\\\\s*(seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h)\\\\b").find(compact)
+                val m = Regex("([0-9]+(?:\\\\.[0-9]+)?)\\\\s*(seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h)").find(compact)
                 if (m == null || (!compact.contains("timer") && !compact.contains("countdown"))) null
                 else {
                     val amount = m.groupValues[1].toDoubleOrNull()
@@ -76,7 +75,7 @@ if "ASTRA_TIMER_HARDENED" not in s:
 '''
     s = s[:i] + block + s[i:]
 
-# Remove any previously injected broken timer block that references variables outside handle().
+# Remove legacy injected timer code if an older workflow left it behind.
 s = re.sub(
     r'\n\s*val timerSeconds = parseTimerSeconds\(t\).*?\n\s*\}\n',
     '\n',
