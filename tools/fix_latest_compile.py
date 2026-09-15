@@ -3,8 +3,22 @@ from pathlib import Path
 runtime = Path("app/src/main/java/com/astra/ai/AstraAgentRuntime.kt")
 s = runtime.read_text(encoding="utf-8")
 
-# The generated runtime contains invalid Kotlin string regex escapes in both
-# greeting helpers. Replace both helpers with regex-free normalization.
+# Convert any generated Regex("\\s+") expression to a Kotlin raw-string regex.
+# Raw strings make the backslash unambiguous to the Kotlin lexer.
+lines = []
+for line in s.splitlines(keepends=True):
+    if 'Regex(' in line and '\\s+' in line:
+        before, rest = line.split('Regex(', 1)
+        end = rest.find('),')
+        if end >= 0 and rest.startswith('"') and rest[end-1:end] == '"':
+            pattern = rest[1:end-1]
+            rest_after = rest[end+1:]
+            line = before + 'Regex("""' + pattern + '""")' + rest_after
+    lines.append(line)
+s = ''.join(lines)
+
+# Also remove the generated canned/greeting normalizers entirely if their
+# source still contains a normal-string regex escape.
 def replace_function(source: str, signature: str, next_signature: str, body: str) -> str:
     start = source.find(signature)
     end = source.find(next_signature, start)
