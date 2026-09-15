@@ -27,6 +27,7 @@ jobs:
           python tools/fix_audio_compile.py
           python tools/upgrade_intelligence_ui.py
           python tools/fix_intelligence_compile.py
+          python tools/upgrade_lan_web_ui.py
       - name: Build unified debug APK
         shell: bash
         run: |
