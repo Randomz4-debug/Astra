@@ -1,12 +1,11 @@
 from pathlib import Path
 import re
 
-# The agent upgrade script can leave Kotlin regex whitespace escapes as a single
-# backslash (\s), which is invalid in a normal Kotlin string literal.
+# Normalize every backslash run before the regex whitespace token to exactly
+# two backslashes, which is the correct representation inside a Kotlin string.
 runtime = Path("app/src/main/java/com/astra/ai/AstraAgentRuntime.kt")
 s = runtime.read_text(encoding="utf-8")
-# Convert only a single backslash before s to a Kotlin-safe double backslash.
-s = re.sub(r'(?<!\\)\\s', r'\\\\s', s)
+s = re.sub(r'\\+s', r'\\\\s', s)
 runtime.write_text(s, encoding="utf-8")
 
 # Give recursive JSON-builder functions explicit return types so Kotlin's
