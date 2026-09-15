@@ -44,6 +44,7 @@ jobs:
           python tools/add_automation_brain.py
           python tools/fix_automation_compile.py
           python tools/upgrade_agent_brain_and_device_control.py
+          python tools/fix_latest_compile.py
       - name: Verify critical Astra features
         shell: bash
         run: |
