@@ -20,11 +20,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      - name: Apply reproducible Astra audio hardening
+      - name: Apply Astra upgrades
         shell: bash
         run: |
           python tools/upgrade_audio_sync.py
           python tools/fix_audio_compile.py
+          python tools/upgrade_intelligence_ui.py
+          python tools/fix_intelligence_compile.py
       - name: Build unified debug APK
         shell: bash
         run: |
