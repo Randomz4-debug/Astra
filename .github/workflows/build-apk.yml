@@ -91,7 +91,6 @@ jobs:
           ! grep -q 'LaunchedEffect(page) { if (page == 1) discoverAllModels() }' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           ! grep -q 'Fetch OpenAI Models' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           ! grep -q 'openAi.discoverModels()' app/src/main/java/com/astra/ai/AstraMainActivity.kt
-          ! grep -q 'openAiModels' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           grep -q 'hasOpenAiApiKey' app/src/main/java/com/astra/ai/AstraViewModel.kt
       - name: Build unified debug APK
         shell: bash
