@@ -50,6 +50,7 @@ jobs:
           python tools/fix_multi_agent_compile.py
           python tools/final_ui_performance_cleanup.py
           python tools/fix_openai_ui_and_compile.py
+          python tools/upgrade_screen_agent_translation.py
       - name: Verify critical Astra features
         shell: bash
         run: |
@@ -70,8 +71,10 @@ jobs:
           test -f app/src/main/java/com/astra/ai/AstraAgenticExecutor.kt
           test -f app/src/main/java/com/astra/ai/AstraMultiAgentRuntime.kt
           test -f app/src/main/java/com/astra/ai/AstraSiriVoiceInteractionSession.kt
+          test -f app/src/main/java/com/astra/ai/AstraPromptTranslationService.kt
           test -f tools/final_ui_performance_cleanup.py
           test -f tools/fix_openai_ui_and_compile.py
+          test -f tools/upgrade_screen_agent_translation.py
           grep -q 'AstraConnectedAppsActivity' app/src/main/AndroidManifest.xml
           grep -q 'AstraAutomationActivity' app/src/main/AndroidManifest.xml
           grep -q 'AstraAutomationReceiver' app/src/main/AndroidManifest.xml
@@ -83,7 +86,12 @@ jobs:
           grep -q 'AstraAIProviderRouter' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraAutomationEngine' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraAutomationActivity' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
+          grep -q 'AstraPromptTranslationService' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
+          grep -q 'readInteractiveScreen' app/src/main/java/com/astra/ai/AstraAccessibilityService.kt
           grep -q 'clickTextNormalized' app/src/main/java/com/astra/ai/AstraAccessibilityService.kt
+          grep -q 'scrollSemantic' app/src/main/java/com/astra/ai/AstraAccessibilityService.kt
+          grep -q 'waitForUiChange' app/src/main/java/com/astra/ai/AstraAgenticExecutor.kt
+          grep -q 'timer' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraAdvancedSettingsActivity' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           grep -q 'AstraVoiceActivity' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           ! grep -q 'endpoint.contains(":12434")' app/src/main/java/com/astra/ai/AstraMainActivity.kt
