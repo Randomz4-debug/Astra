@@ -1,24 +1,14 @@
 from pathlib import Path
+import re
 
 runtime = Path("app/src/main/java/com/astra/ai/AstraAgentRuntime.kt")
 s = runtime.read_text(encoding="utf-8")
 
-# Convert any generated Regex("\\s+") expression to a Kotlin raw-string regex.
-# Raw strings make the backslash unambiguous to the Kotlin lexer.
-lines = []
-for line in s.splitlines(keepends=True):
-    if 'Regex(' in line and '\\s+' in line:
-        before, rest = line.split('Regex(', 1)
-        end = rest.find('),')
-        if end >= 0 and rest.startswith('"') and rest[end-1:end] == '"':
-            pattern = rest[1:end-1]
-            rest_after = rest[end+1:]
-            line = before + 'Regex("""' + pattern + '""")' + rest_after
-    lines.append(line)
-s = ''.join(lines)
+# Eliminate the generated \s+ token completely. Java/Kotlin regex supports
+# the POSIX space class, so no Kotlin string backslash escaping is needed.
+s = re.sub(r'\\+s\+', '[[:space:]]+', s)
 
-# Also remove the generated canned/greeting normalizers entirely if their
-# source still contains a normal-string regex escape.
+# Remove generated greeting normalizers as a second line of defense.
 def replace_function(source: str, signature: str, next_signature: str, body: str) -> str:
     start = source.find(signature)
     end = source.find(next_signature, start)
