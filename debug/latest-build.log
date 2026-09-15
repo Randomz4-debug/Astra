@@ -11,8 +11,8 @@ Daemon will be stopped at the end of the build
 > Task :app:packageDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
-> Task :app:mergeDebugResources
 > Task :app:parseDebugLocalResources
+> Task :app:mergeDebugResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
 > Task :app:javaPreCompileDebug
@@ -20,78 +20,30 @@ Daemon will be stopped at the end of the build
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
+> Task :app:processDebugManifestForPackage
 > Task :app:desugarDebugFileDependencies
 > Task :app:compressDebugAssets
-> Task :app:processDebugManifestForPackage
-> Task :app:checkDebugDuplicateClasses
 > Task :app:mergeDebugJniLibFolders
-> Task :app:mergeLibDexDebug
+> Task :app:checkDebugDuplicateClasses
 > Task :app:processDebugResources
 > Task :app:mergeDebugNativeLibs
-> Task :app:validateSigningDebug
-> Task :app:writeDebugAppMetadata
-> Task :app:writeDebugSigningConfigVersions
+> Task :app:mergeLibDexDebug
 
 > Task :app:stripDebugDebugSymbols
 Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libimage_processing_util_jni.so, liblanguage_id_l2c_jni.so, libmlkit_google_ocr_pipeline.so, libsurface_util_jni.so, libtranslate_jni.so.
 
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
 > Task :app:mergeExtDexDebug
 
 > Task :app:compileDebugKotlin FAILED
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:220:25 Inapplicable candidate(s): fun OutlinedButton(onClick: () -> Unit, modifier: Modifier = ..., enabled: Boolean = ..., shape: Shape = ..., colors: ButtonColors = ..., elevation: ButtonElevation? = ..., border: BorderStroke? = ..., contentPadding: PaddingValues = ..., interactionSource: MutableInteractionSource? = ..., content: @Composable() ComposableFunction1<RowScope, Unit>): Unit
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:234:102 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:235:21 'if' must have both main and 'else' branches when used as an expression.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:235:51 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:235:116 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:236:21 Unresolved reference 'OutlinedButton'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:236:36 Unresolved reference 'onClick'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:236:36 Only expressions are allowed in this context.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:236:233 Syntax error: Expecting ')'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:236:271 No parameter with name 'content' found.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:236:271 No value passed for parameter 'color'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:236:283 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:238:17 Unresolved reference 'item'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:239:21 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:239:79 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:240:21 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:240:177 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:241:21 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:242:21 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:243:130 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:243:135 Syntax error: Expecting an argument.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:243:169 No parameter with name 'content' found.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:243:169 No value passed for parameter 'text'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:243:169 No value passed for parameter 'color'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:243:181 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:245:21 Unresolved reference 'OutlinedTextField'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:245:50 Syntax error: Expecting ')'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:245:68 Unresolved reference 'it'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:245:99 No parameter with name 'label' found.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:245:109 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:245:133 No parameter with name 'singleLine' found.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:245:152 No parameter with name 'supportingText' found.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:245:171 @Composable invocations can only happen from the context of a @Composable function
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:258:17 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:259:17 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:266:17 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:271:17 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:272:17 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:273:14 Syntax error: Expecting ','.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:274:13 'if' must have both main and 'else' branches when used as an expression.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:275:17 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:276:17 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:277:17 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:278:14 Syntax error: Expecting ','.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:279:13 'if' must have both main and 'else' branches when used as an expression.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:280:5 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:281:5 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:282:5 'fun <T> LazyListScope.items(items: List<T>, noinline key: ((@ParameterName(...) T) -> Any)? = ..., noinline contentType: (@ParameterName(...) T) -> Any? = ..., crossinline itemContent: @Composable() ComposableFunction2<LazyItemScope, @ParameterName(...) T, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:283:2 Syntax error: Expecting ','.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:284:13 'if' must have both main and 'else' branches when used as an expression.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:284:36 'fun item(key: Any? = ..., contentType: Any? = ..., content: @Composable() ComposableFunction1<LazyItemScope, Unit>): Unit' cannot be called in this context with an implicit receiver. Use an explicit receiver if necessary.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:284:205 Syntax error: Expecting ')'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:287:2 Syntax error: Expecting '}'.
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789485046666.json
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:174:158 Unresolved reference 'cloudResult'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:252:25 Unresolved reference 'openAiModels'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:254:137 Unresolved reference 'openAiModels'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:254:160 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:254:168 @Composable invocations can only happen from the context of a @Composable function
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789485056401.json
 
 FAILURE: Build failed with an exception.
 
@@ -136,6 +88,35 @@ org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:com
 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+	at org.gradle.execution.plan.DefaultPlanExecutor.process(DefaultPlanExecutor.java:111)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.executeWithServices(DefaultTaskExecutionGraph.java:138)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.execute(DefaultTaskExecutionGraph.java:123)
+	at org.gradle.execution.SelectedTaskExecutionAction.execute(SelectedTaskExecutionAction.java:35)
+	at org.gradle.execution.DryRunBuildExecutionAction.execute(DryRunBuildExecutionAction.java:51)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:54)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:43)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor.execute(BuildOperationFiringBuildWorkerExecutor.java:40)
+	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$executeTasks$10(DefaultBuildLifecycleController.java:313)
+	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
+	at org.gradle.internal.model.StateTransitionController.lambda$tryTransition$8(StateTransitionController.java:177)
+	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:44)
+	at org.gradle.internal.model.StateTransitionController.tryTransition(StateTransitionController.java:177)
+	at org.gradle.internal.build.DefaultBuildLifecycleController.executeTasks(DefaultBuildLifecycleController.java:304)
+	at org.gradle.internal.build.DefaultBuildWorkGraphController$DefaultBuildWorkGraph.runWork(DefaultBuildWorkGraphController.java:220)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
+	at org.gradle.composite.internal.DefaultBuildController.doRun(DefaultBuildController.java:181)
+	at org.gradle.composite.internal.DefaultBuildController.access$000(DefaultBuildController.java:50)
+	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.lambda$run$0(DefaultBuildController.java:198)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.run(DefaultBuildController.java:198)
 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
 Caused by: org.gradle.workers.internal.DefaultWorkerExecutor$WorkExecutionException: A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
@@ -260,6 +241,35 @@ Caused by: org.gradle.workers.internal.DefaultWorkerExecutor$WorkExecutionExcept
 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+	at org.gradle.execution.plan.DefaultPlanExecutor.process(DefaultPlanExecutor.java:111)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.executeWithServices(DefaultTaskExecutionGraph.java:138)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.execute(DefaultTaskExecutionGraph.java:123)
+	at org.gradle.execution.SelectedTaskExecutionAction.execute(SelectedTaskExecutionAction.java:35)
+	at org.gradle.execution.DryRunBuildExecutionAction.execute(DryRunBuildExecutionAction.java:51)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:54)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:43)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor.execute(BuildOperationFiringBuildWorkerExecutor.java:40)
+	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$executeTasks$10(DefaultBuildLifecycleController.java:313)
+	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
+	at org.gradle.internal.model.StateTransitionController.lambda$tryTransition$8(StateTransitionController.java:177)
+	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:44)
+	at org.gradle.internal.model.StateTransitionController.tryTransition(StateTransitionController.java:177)
+	at org.gradle.internal.build.DefaultBuildLifecycleController.executeTasks(DefaultBuildLifecycleController.java:304)
+	at org.gradle.internal.build.DefaultBuildWorkGraphController$DefaultBuildWorkGraph.runWork(DefaultBuildWorkGraphController.java:220)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
+	at org.gradle.composite.internal.DefaultBuildController.doRun(DefaultBuildController.java:181)
+	at org.gradle.composite.internal.DefaultBuildController.access$000(DefaultBuildController.java:50)
+	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.lambda$run$0(DefaultBuildController.java:198)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.run(DefaultBuildController.java:198)
 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
 Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilation error. See log for more details
@@ -295,5 +305,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 33s
+BUILD FAILED in 43s
 28 actionable tasks: 28 executed
