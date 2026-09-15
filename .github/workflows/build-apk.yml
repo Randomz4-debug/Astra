@@ -43,6 +43,7 @@ jobs:
           python tools/fix_ai_model_ui_and_openai_lag.py
           python tools/add_automation_brain.py
           python tools/fix_automation_compile.py
+          python tools/upgrade_agent_brain_and_device_control.py
       - name: Verify critical Astra features
         shell: bash
         run: |
@@ -60,16 +61,19 @@ jobs:
           test -f app/src/main/java/com/astra/ai/AstraAutomationActivity.kt
           test -f app/src/main/java/com/astra/ai/AstraAutomationReceiver.kt
           test -f app/src/main/java/com/astra/ai/AstraCommandPlanner.kt
+          test -f app/src/main/java/com/astra/ai/AstraAgenticExecutor.kt
           grep -q 'AstraConnectedAppsActivity' app/src/main/AndroidManifest.xml
           grep -q 'AstraAutomationActivity' app/src/main/AndroidManifest.xml
           grep -q 'AstraAutomationReceiver' app/src/main/AndroidManifest.xml
           grep -q 'AstraVoiceInteractionSessionService' app/src/main/res/xml/voice_interaction_service.xml
           grep -q 'onAudioAvailable' app/src/main/java/com/astra/ai/AstraVoiceInteractionSession.kt
           grep -q 'AstraAgentRuntime(sessionContext)' app/src/main/java/com/astra/ai/AstraVoiceInteractionSession.kt
+          grep -q 'AstraAgenticExecutor' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraCommandPlanner' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraAIProviderRouter' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraAutomationEngine' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraAutomationActivity' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
+          grep -q 'clickTextNormalized' app/src/main/java/com/astra/ai/AstraAccessibilityService.kt
           grep -q 'AstraAdvancedSettingsActivity' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           ! grep -q 'endpoint.contains(":12434")' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           ! grep -q 'u.port == 12434' app/src/main/java/com/astra/ai/LocalAiGateway.kt
