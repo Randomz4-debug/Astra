@@ -8,8 +8,12 @@ import android.service.voice.VoiceInteractionSession
 class AstraVoiceInteractionService : VoiceInteractionService() {
     override fun onReady() {
         super.onReady()
+        // compileSdk 35 does not expose the API-36.1 method directly, so use reflection.
         if (android.os.Build.VERSION.SDK_INT >= 36) {
-            runCatching { setInvocationEffectEnabled(true) }
+            runCatching {
+                val method = VoiceInteractionService::class.java.getMethod("setInvocationEffectEnabled", Boolean::class.javaPrimitiveType)
+                method.invoke(this, true)
+            }
         }
     }
 
