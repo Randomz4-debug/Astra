@@ -48,6 +48,7 @@ jobs:
           python tools/upgrade_siri_ui.py
           python tools/upgrade_multi_agent_smoothness.py
           python tools/fix_multi_agent_compile.py
+          python tools/final_ui_performance_cleanup.py
       - name: Verify critical Astra features
         shell: bash
         run: |
@@ -68,6 +69,7 @@ jobs:
           test -f app/src/main/java/com/astra/ai/AstraAgenticExecutor.kt
           test -f app/src/main/java/com/astra/ai/AstraMultiAgentRuntime.kt
           test -f app/src/main/java/com/astra/ai/AstraSiriVoiceInteractionSession.kt
+          test -f tools/final_ui_performance_cleanup.py
           grep -q 'AstraConnectedAppsActivity' app/src/main/AndroidManifest.xml
           grep -q 'AstraAutomationActivity' app/src/main/AndroidManifest.xml
           grep -q 'AstraAutomationReceiver' app/src/main/AndroidManifest.xml
@@ -86,7 +88,9 @@ jobs:
           grep -q 'local.endpoint()' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           grep -q 'local.configure(endpoint, model)' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           ! grep -q 'LaunchedEffect(page) { if (page == 1) discoverAllModels() }' app/src/main/java/com/astra/ai/AstraMainActivity.kt
-          grep -q 'Fetch OpenAI Models' app/src/main/java/com/astra/ai/AstraMainActivity.kt
+          ! grep -q 'Fetch OpenAI Models' app/src/main/java/com/astra/ai/AstraMainActivity.kt
+          ! grep -q 'openAi.discoverModels()' app/src/main/java/com/astra/ai/AstraMainActivity.kt
+          ! grep -q 'openAiModels' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           grep -q 'Fetch Local Models' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           grep -q 'hasOpenAiApiKey' app/src/main/java/com/astra/ai/AstraViewModel.kt
       - name: Build unified debug APK
