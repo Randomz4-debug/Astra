@@ -47,6 +47,7 @@ jobs:
           python tools/fix_latest_compile.py
           python tools/upgrade_siri_ui.py
           python tools/upgrade_multi_agent_smoothness.py
+          python tools/fix_multi_agent_compile.py
       - name: Verify critical Astra features
         shell: bash
         run: |
