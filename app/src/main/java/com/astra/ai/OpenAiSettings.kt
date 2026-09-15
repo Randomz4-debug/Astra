@@ -21,8 +21,9 @@ class OpenAiSettings(context: Context) {
     fun saveApiKey(value: String) { secure.setOpenAiApiKey(value.trim()) }
     fun clearApiKey() { secure.setOpenAiApiKey("") }
 
-    fun model(): String = prefs.getString("model", "gpt-5.6-luna") ?: "gpt-5.6-luna"
-    fun setModel(value: String) { prefs.edit().putString("model", value.trim().ifBlank { "gpt-5.6-luna" }).apply() }
+    /** Strong reasoning default; users can still select any model returned by Fetch Models. */
+    fun model(): String = prefs.getString("model", "gpt-5.6-sol") ?: "gpt-5.6-sol"
+    fun setModel(value: String) { prefs.edit().putString("model", value.trim().ifBlank { "gpt-5.6-sol" }).apply() }
 
     /** Explicit model discovery; the network request is always on Dispatchers.IO. */
     suspend fun discoverModels(): List<String> = withContext(Dispatchers.IO) {
