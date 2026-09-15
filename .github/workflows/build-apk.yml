@@ -22,7 +22,9 @@ jobs:
           gradle-version: '8.10.2'
       - name: Apply reproducible Astra audio hardening
         shell: bash
-        run: python tools/upgrade_audio_sync.py
+        run: |
+          python tools/upgrade_audio_sync.py
+          python tools/fix_audio_compile.py
       - name: Build unified debug APK
         shell: bash
         run: |
