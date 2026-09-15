@@ -10,37 +10,37 @@ Daemon will be stopped at the end of the build
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
 > Task :app:createDebugCompatibleScreenManifests
-> Task :app:mergeDebugResources
 > Task :app:extractDeepLinksDebug
+> Task :app:mergeDebugResources
 > Task :app:parseDebugLocalResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
 > Task :app:javaPreCompileDebug
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
-> Task :app:processDebugManifestForPackage
 > Task :app:desugarDebugFileDependencies
-> Task :app:mergeDebugJniLibFolders
 > Task :app:compressDebugAssets
+> Task :app:mergeDebugJniLibFolders
 > Task :app:checkDebugDuplicateClasses
-> Task :app:mergeLibDexDebug
-> Task :app:mergeDebugNativeLibs
 > Task :app:processDebugResources
-> Task :app:validateSigningDebug
-> Task :app:writeDebugAppMetadata
-> Task :app:writeDebugSigningConfigVersions
+> Task :app:mergeDebugNativeLibs
+> Task :app:mergeLibDexDebug
 
 > Task :app:stripDebugDebugSymbols
 Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libimage_processing_util_jni.so, liblanguage_id_l2c_jni.so, libmlkit_google_ocr_pipeline.so, libsurface_util_jni.so, libtranslate_jni.so.
 
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
 > Task :app:mergeExtDexDebug
 
 > Task :app:compileDebugKotlin FAILED
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraProviderActivity.kt:13:77 Unresolved reference 'padding'.
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/LiveAgentSession.kt:71:33 Unresolved reference 'cancel'.
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_2-1789466529353.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789466549009.json
 
 FAILURE: Build failed with an exception.
 
@@ -244,5 +244,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 37s
+BUILD FAILED in 30s
 28 actionable tasks: 28 executed
