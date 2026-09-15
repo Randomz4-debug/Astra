@@ -37,18 +37,24 @@ jobs:
           python tools/upgrade_advanced_settings.py
           python tools/fix_advanced_compile.py
           python tools/fix_settings_persistence.py
+          python tools/fix_persistent_settings_and_connections.py
+          python tools/harden_ai_routing_and_settings.py
       - name: Verify critical Astra features
         shell: bash
         run: |
           set -e
           test -f app/src/main/java/com/astra/ai/LiveAgentSession.kt
           test -f app/src/main/java/com/astra/ai/AstraCredentialVault.kt
+          test -f app/src/main/java/com/astra/ai/AstraConnectionManager.kt
+          test -f app/src/main/java/com/astra/ai/AstraOAuthManager.kt
+          test -f app/src/main/java/com/astra/ai/AstraConnectedAppsActivity.kt
           test -f app/src/main/java/com/astra/ai/AstraAdvancedSettingsActivity.kt
-          grep -q 'AstraAdvancedSettingsActivity' app/src/main/AndroidManifest.xml
+          grep -q 'AstraConnectedAppsActivity' app/src/main/AndroidManifest.xml
           grep -q 'AstraVoiceInteractionSessionService' app/src/main/res/xml/voice_interaction_service.xml
           grep -q 'onAudioAvailable' app/src/main/java/com/astra/ai/AstraVoiceInteractionSession.kt
           grep -q 'AstraAdvancedSettingsActivity' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           ! grep -q 'endpoint.contains(":12434")' app/src/main/java/com/astra/ai/AstraMainActivity.kt
+          ! grep -q 'u.port == 12434' app/src/main/java/com/astra/ai/LocalAiGateway.kt
           grep -q 'local.endpoint()' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           grep -q 'local.configure(endpoint, model)' app/src/main/java/com/astra/ai/AstraMainActivity.kt
       - name: Build unified debug APK
