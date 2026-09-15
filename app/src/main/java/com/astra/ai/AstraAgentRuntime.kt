@@ -1,6 +1,7 @@
 package com.astra.ai
 
 import android.content.Context
+import android.content.Intent
 
 /** Shared assistant brain used by native UI, Web UI and background services. */
 class AstraAgentRuntime(context: Context) {
@@ -19,23 +20,14 @@ class AstraAgentRuntime(context: Context) {
     private val apiHub = AstraApiHub(appContext)
 
     suspend fun handle(input: String, localOnly: Boolean): String {
-        val clean = input.trim()
-        if (clean.isBlank()) return ""
-        val lower = clean.lowercase()
-        val customResult = runCatching { customCommands.handle(clean) }.getOrNull()
-        if (customResult != null) return customResult.message
-        if (lower.startsWith("run in background ") || lower.startsWith("start background task ") || lower.startsWith("run task in background ")) {
-            val prompt = clean.substringAfter("background", "").trim().removePrefix("task").trim()
-            if (prompt.isBlank()) return "Tell me what you want me to run in the background."
-            val id = taskManager.start(prompt)
-            return "Background task $id started. I will execute its steps in order."
+        val clean = input.trim(); if (clean.isBlank()) return ""; val lower = clean.lowercase()
+        if (lower == "api manager" || lower == "api settings" || lower == "manage apis" || lower == "open api manager" || lower == "open api settings") {
+            return runCatching { appContext.startActivity(Intent(appContext, AstraApiActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); "Opening the Astra API Hub." }.getOrElse { "Could not open the API Hub: ${it.message}" }
         }
-        if (lower == "list background tasks" || lower == "show background tasks" || lower == "tasks") {
-            val all = taskManager.all(); return if (all.isEmpty()) "No background tasks." else all.joinToString("; ") { "${it.id}: ${it.status} ${it.step}/${it.total}" }
-        }
-        if (lower.startsWith("stop background task ") || lower.startsWith("terminate background task ")) {
-            val id = clean.substringAfterLast(' ').trim(); return if (taskManager.stop(id)) "Stopped background task $id." else "Background task $id was not running."
-        }
+        val customResult = runCatching { customCommands.handle(clean) }.getOrNull(); if (customResult != null) return customResult.message
+        if (lower.startsWith("run in background ") || lower.startsWith("start background task ") || lower.startsWith("run task in background ")) { val prompt = clean.substringAfter("background", "").trim().removePrefix("task").trim(); if (prompt.isBlank()) return "Tell me what you want me to run in the background."; val id = taskManager.start(prompt); return "Background task $id started. I will execute its steps in order." }
+        if (lower == "list background tasks" || lower == "show background tasks" || lower == "tasks") { val all = taskManager.all(); return if (all.isEmpty()) "No background tasks." else all.joinToString("; ") { "${it.id}: ${it.status} ${it.step}/${it.total}" } }
+        if (lower.startsWith("stop background task ") || lower.startsWith("terminate background task ")) { val id = clean.substringAfterLast(' ').trim(); return if (taskManager.stop(id)) "Stopped background task $id." else "Background task $id was not running." }
         val chatId = currentChatId(); chats.append(chatId, "user", clean)
         val answer = try {
             when {
@@ -51,7 +43,7 @@ class AstraAgentRuntime(context: Context) {
                 lower == "what do you remember" || lower == "show my memory" -> { val all = memory.all(); if (all.isEmpty()) "I don't have any saved local memories." else all.entries.joinToString("; ") { "${it.key}: ${it.value}" } }
                 lower.startsWith("forget ") -> { memory.forget(clean.substringAfter("forget ").trim()); "Forgotten from local Astra memory." }
                 lower == "delete all astra memory" -> "I need confirmation before deleting all Astra memory."
-                lower.startsWith("add custom command ") -> { val body = clean.substringAfter("add custom command ").trim(); val parts = body.split("=", limit = 2); if (parts.size != 2) "Use: add custom command <trigger> = <actions>" else runCatching { val c = customCommands.save(parts[0].trim(), parts[1].trim()); "Saved custom command ${c.id}: ${c.trigger}." }.getOrElse { "Could not save custom command: ${it.message}" } }
+                lower.startsWith("add custom command ") -> { val body = clean.substringAfter("add custom command ").trim(); val parts = body.split("=", limit = 2); if (parts.size != 2) "Use: add custom command <trigger> = <actions>" else runCatching { val c = customCommands.save(parts[0].trim(), parts[1].trim()); "Saved custom command ${c.id}: ${c.trigger}." }.getOrElse { "Could not save command: ${it.message}" } }
                 lower.startsWith("delete custom command ") -> { val trigger = clean.substringAfter("command ").trim(); if (customCommands.delete(trigger)) "Deleted custom command $trigger." else "Custom command not found." }
                 lower == "list custom commands" || lower == "show custom commands" -> { val all = customCommands.commands(); if (all.isEmpty()) "No custom commands saved." else all.joinToString("; ") { "${it.id}: ${it.trigger} -> ${it.actions}" } }
                 else -> { val tool = commands.handle(clean); if (tool != null) tool.message else generateModelAnswer(chatId, clean, localOnly) }
@@ -65,9 +57,7 @@ class AstraAgentRuntime(context: Context) {
     private suspend fun generateModelAnswer(chatId: String, clean: String, localOnly: Boolean): String {
         val history = chats.recentMessages(chatId, oneYear = true, limit = 80)
         val historyText = if (history.isEmpty()) "(no earlier messages)" else history.dropLast(1).joinToString("\n") { "${if (it.role == "user") "USER" else "ASTRA"}: ${it.text}" }
-        val workspaceText = workspace.contextText()
-        val screenText = AstraAccessibilityService.current()?.readScreen().orEmpty().trim().take(16000)
-        val apiCatalog = apiHub.catalog()
+        val workspaceText = workspace.contextText(); val screenText = AstraAccessibilityService.current()?.readScreen().orEmpty().trim().take(16000); val apiCatalog = apiHub.catalog()
         val toolCapabilities = """
 You are the reasoning brain inside the Android assistant Astra. The Android execution layer is part of the same assistant.
 Available capabilities include authorized app launching, opening URLs and Maps, camera/photo workflows, screen understanding and interaction when Accessibility Access is enabled, user-authorized screen capture, notifications/replies where Android exposes an action, phone calls where permitted, files/workspace, memory, local/LAN/cloud AI, and user-configured REST APIs.
@@ -76,11 +66,7 @@ SCREEN ACCESS: The CURRENT SCREEN TEXT below is live accessibility information f
 Never claim an action succeeded unless Astra actually executed it. For multi-step requests, reason about the steps in order and do not pretend a later step happened if an earlier step failed.
 Imported workspace files are supplied below when they are text-readable. Binary files remain stored for file operations but are not automatically converted to text.
 """.trimIndent()
-        val prompt = AstraPersona.systemPrompt(appContext) + "\n\n" + toolCapabilities +
-            "\n\nCONFIGURED REST APIS:\n" + apiCatalog +
-            "\n\nCURRENT SCREEN TEXT:\n" + if (screenText.isBlank()) "(unavailable; Accessibility Access may be disabled)" else screenText +
-            "\n\nRECENT ASTRA CHAT HISTORY (up to 1 year, current chat):\n" + historyText +
-            "\n\nIMPORTED ASTRA WORKSPACE:\n" + workspaceText + "\n\nCURRENT USER REQUEST:\n" + clean
+        val prompt = AstraPersona.systemPrompt(appContext) + "\n\n" + toolCapabilities + "\n\nCONFIGURED REST APIS:\n" + apiCatalog + "\n\nCURRENT SCREEN TEXT:\n" + if (screenText.isBlank()) "(unavailable; Accessibility Access may be disabled)" else screenText + "\n\nRECENT ASTRA CHAT HISTORY (up to 1 year, current chat):\n" + historyText + "\n\nIMPORTED ASTRA WORKSPACE:\n" + workspaceText + "\n\nCURRENT USER REQUEST:\n" + clean
         val mode = prefs.getString("ai_mode", "auto") ?: "auto"
         if (localOnly || mode == "offline") return localEngine.respond(prompt)
         if (mode == "online") return cloudOrLocal(prompt)
