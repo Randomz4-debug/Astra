@@ -40,6 +40,7 @@ jobs:
           python tools/fix_persistent_settings_and_connections.py
           python tools/harden_ai_routing_and_settings.py
           python tools/add_connection_commands.py
+          python tools/fix_ai_model_ui_and_openai_lag.py
       - name: Verify critical Astra features
         shell: bash
         run: |
@@ -61,6 +62,9 @@ jobs:
           ! grep -q 'u.port == 12434' app/src/main/java/com/astra/ai/LocalAiGateway.kt
           grep -q 'local.endpoint()' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           grep -q 'local.configure(endpoint, model)' app/src/main/java/com/astra/ai/AstraMainActivity.kt
+          ! grep -q 'LaunchedEffect(page) { if (page == 1) discoverAllModels() }' app/src/main/java/com/astra/ai/AstraMainActivity.kt
+          grep -q 'Fetch OpenAI Models' app/src/main/java/com/astra/ai/AstraMainActivity.kt
+          grep -q 'Fetch Local Models' app/src/main/java/com/astra/ai/AstraMainActivity.kt
       - name: Build unified debug APK
         shell: bash
         run: |
