@@ -4,29 +4,29 @@ Daemon will be stopped at the end of the build
 > Task :app:preDebugBuild UP-TO-DATE
 > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
 > Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
-> Task :app:checkDebugAarMetadata
 > Task :app:generateDebugResValues
+> Task :app:checkDebugAarMetadata
 > Task :app:mapDebugSourceSetPaths
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
-> Task :app:mergeDebugResources
 > Task :app:parseDebugLocalResources
+> Task :app:mergeDebugResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
-> Task :app:processDebugManifestForPackage
 > Task :app:javaPreCompileDebug
 > Task :app:mergeDebugShaders
+> Task :app:processDebugManifestForPackage
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
 > Task :app:desugarDebugFileDependencies
-> Task :app:mergeDebugJniLibFolders
 > Task :app:compressDebugAssets
+> Task :app:mergeDebugJniLibFolders
 > Task :app:checkDebugDuplicateClasses
-> Task :app:mergeDebugNativeLibs
 > Task :app:processDebugResources
+> Task :app:mergeDebugNativeLibs
 > Task :app:mergeLibDexDebug
 
 > Task :app:stripDebugDebugSymbols
@@ -37,10 +37,12 @@ Unable to strip the following libraries, packaging them as they are: libandroidx
 > Task :app:writeDebugSigningConfigVersions
 > Task :app:mergeExtDexDebug
 
-> Task :app:compileDebugKotlin FAILED
+> Task :app:compileDebugKotlin
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraSiriVoiceInteractionSession.kt:71:59 Unresolved reference 'hintTextColor'.
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraSiriVoiceInteractionSession.kt:127:680 Argument type mismatch: actual type is 'Double', but 'Float' was expected.
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789478466635.json
+
+> Task :app:compileDebugKotlin FAILED
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789478455230.json
 
 FAILURE: Build failed with an exception.
 
@@ -244,5 +246,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 25s
+BUILD FAILED in 41s
 28 actionable tasks: 28 executed
