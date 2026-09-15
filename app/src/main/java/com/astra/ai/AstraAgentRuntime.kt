@@ -49,7 +49,32 @@ class AstraAgentRuntime(context: Context) {
                 else -> { val tool = commands.handle(clean); if (tool != null) tool.message else generateModelAnswer(chatId, clean, localOnly) }
             }
         } catch (t: Throwable) { "Astra error: ${t.message ?: "unknown error"}" }
-        chats.append(chatId, "assistant", answer); return answer
+
+        // Some small/local models can ignore the request and return the same canned greeting.
+        // Never show that greeting as the answer to an unrelated typed request. Retry once with
+        // an explicit request-focused prompt; if the model still fails, expose the real failure.
+        var finalAnswer = answer
+        if (isCannedGreeting(answer) && !isGreeting(clean)) {
+            val retry = runCatching {
+                generateModelAnswer(chatId, "Answer the user's request directly. Do not greet, introduce yourself, or say you are here to help. User request: $clean", localOnly)
+            }.getOrNull().orEmpty()
+            finalAnswer = if (retry.isNotBlank() && !isCannedGreeting(retry)) retry
+            else "I received your message, but Astra's configured AI model did not return a useful answer. Check the AI connection/model in Astra Settings."
+        }
+        chats.append(chatId, "assistant", finalAnswer); return finalAnswer
+    }
+
+    private fun isGreeting(text: String): Boolean {
+        val n = text.lowercase().trim().replace(Regex("[^a-z0-9 ]"), " ").replace(Regex("\\s+"), " ")
+        return n in setOf("hi", "hello", "hey", "hey astra", "hi astra", "hello astra", "good morning", "good afternoon", "good evening")
+    }
+
+    private fun isCannedGreeting(text: String): Boolean {
+        val n = text.lowercase().trim().replace(Regex("\\s+"), " ")
+        return n == "hi i am astra and i am here to help you." ||
+            n == "hi, i am astra and i am here to help you." ||
+            n == "hi i am astra and i'm here to help you." ||
+            (n.length < 100 && n.contains("i am astra") && n.contains("here to help"))
     }
 
     suspend fun automationReason(instruction: String): String = generateModelAnswer(currentChatId(), instruction, false)
