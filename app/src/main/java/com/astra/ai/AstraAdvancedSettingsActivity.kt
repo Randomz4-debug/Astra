@@ -3,7 +3,6 @@ package com.astra.ai
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -12,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 
 /** Advanced controls required by Astra's full assistant specification. */
 class AstraAdvancedSettingsActivity: ComponentActivity(){
@@ -20,11 +18,12 @@ class AstraAdvancedSettingsActivity: ComponentActivity(){
 }
 
 @Composable private fun AdvancedSettings(a:AstraAdvancedSettingsActivity){
- val prefs=a.getSharedPreferences("astra_runtime",0); val scope=rememberCoroutineScope(); val vault=remember{AstraCredentialVault(a)}
+ val prefs=a.getSharedPreferences("astra_runtime",0); val vault=remember{AstraCredentialVault(a)}
  var localOnly by remember{mutableStateOf(prefs.getBoolean("local_only",false))}; var live by remember{mutableStateOf(LiveAgentSession.isRunning())}; var background by remember{mutableStateOf(prefs.getBoolean("always_listen",false))}; var screenOff by remember{mutableStateOf(prefs.getBoolean("screen_off_mode",false))}; var wake by remember{mutableStateOf(prefs.getString("wake_word","astra").orEmpty())}; var timeout by remember{mutableStateOf(prefs.getLong("conversation_timeout_ms",30000L).toString())}; var status by remember{mutableStateOf("")}; var name by remember{mutableStateOf(prefs.getString("assistant_name","Astra").orEmpty())}
  var credName by remember{mutableStateOf("")}; var credType by remember{mutableStateOf("API Key")}; var credValue by remember{mutableStateOf("")}; var credentials by remember{mutableStateOf(vault.list())}
  LazyColumn(Modifier.fillMaxSize().padding(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-  item{Text("Astra Advanced Settings",style=MaterialTheme.typography.headlineMedium);Text("Assistant, privacy, live assistance and reusable connections",color=MaterialTheme.colorScheme.onSurfaceVariant)}
+  item{Text("Astra Advanced Settings",style=MaterialTheme.typography.headlineMedium);Text("Assistant, privacy, live assistance, automations and reusable connections",color=MaterialTheme.colorScheme.onSurfaceVariant)}
+  item{Text("AUTOMATION / WORKFLOWS",style=MaterialTheme.typography.titleLarge);Text("Build local n8n-style workflows with triggers, ordered actions, variables, conditions, branches, loops, retries, HTTP/REST APIs, AI steps, app/UI control, notifications and execution history.",color=MaterialTheme.colorScheme.onSurfaceVariant);Button({a.startActivity(Intent(a,AstraAutomationActivity::class.java))},Modifier.fillMaxWidth()){Text("Open Automation Builder")}}
   item{Text("ASSISTANT",style=MaterialTheme.typography.titleLarge);OutlinedTextField(name,{name=it},Modifier.fillMaxWidth(),label={Text("Assistant name")});Button({prefs.edit().putString("assistant_name",name.trim().ifBlank{"Astra"}).apply();status="Assistant name saved."},Modifier.fillMaxWidth()){Text("Save name")};OutlinedTextField(wake,{wake=it},Modifier.fillMaxWidth(),label={Text("Wake word")});Button({prefs.edit().putString("wake_word",wake.trim()).apply();status="Wake word saved."},Modifier.fillMaxWidth()){Text("Save wake word")}}
   item{Text("VOICE / BACKGROUND",style=MaterialTheme.typography.titleLarge);SwitchRow("Background listening",background){background=it;prefs.edit().putBoolean("always_listen",it).apply()};SwitchRow("Screen-off mode",screenOff){screenOff=it;prefs.edit().putBoolean("screen_off_mode",it).apply()};OutlinedTextField(timeout,{timeout=it.filter(Char::isDigit)},Modifier.fillMaxWidth(),label={Text("Conversation timeout (ms)")});Button({prefs.edit().putLong("conversation_timeout_ms",timeout.toLongOrNull()?:30000L).apply();status="Voice settings saved."},Modifier.fillMaxWidth()){Text("Save voice settings")}}
   item{Text("LIVE ASSIST MODE",style=MaterialTheme.typography.titleLarge);Text("Stay with me while I use WhatsApp, Telegram, Instagram or another app. Astra uses only permitted notifications and accessibility screen state. It never intercepts third-party call audio.",color=MaterialTheme.colorScheme.onSurfaceVariant);Button({if(!live){LiveAgentSession(a).start();live=true;status="Live Assist started."}else{LiveAgentSession.current()?.stop();live=false;status="Live Assist stopped."}},Modifier.fillMaxWidth()){Text(if(live)"Stop Live Assist" else "Start Live Assist")};OutlinedButton({a.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))},Modifier.fillMaxWidth()){Text("Configure Accessibility")};OutlinedButton({a.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))},Modifier.fillMaxWidth()){Text("Configure Notification Access")}}
