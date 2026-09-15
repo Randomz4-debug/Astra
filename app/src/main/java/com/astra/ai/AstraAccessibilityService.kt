@@ -47,7 +47,8 @@ class AstraAccessibilityService : AccessibilityService() {
         if (android.os.Build.VERSION.SDK_INT < 30) return ""
         return suspendCancellableCoroutine { cont ->
             runCatching {
-                takeScreenshot(displayId, mainExecutor, object : TakeScreenshotCallback {
+                val targetDisplayId = display?.displayId ?: 0
+                takeScreenshot(targetDisplayId, mainExecutor, object : TakeScreenshotCallback {
                     override fun onSuccess(result: ScreenshotResult) {
                         runCatching {
                             val bitmap = Bitmap.wrapHardwareBuffer(result.hardwareBuffer, result.colorSpace)
