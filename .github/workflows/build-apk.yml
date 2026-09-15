@@ -33,6 +33,7 @@ jobs:
           python tools/upgrade_lan_web_ui.py
           python tools/upgrade_siri_orb.py
           python tools/fix_siri_compile.py
+          python tools/add_credentials_vault.py
       - name: Build unified debug APK
         shell: bash
         run: |
