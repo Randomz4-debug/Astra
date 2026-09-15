@@ -35,12 +35,14 @@ jobs:
           python tools/upgrade_siri_orb.py
           python tools/fix_siri_compile.py
           python tools/upgrade_advanced_settings.py
+          python tools/fix_advanced_compile.py
       - name: Verify critical Astra features
         shell: bash
         run: |
           set -e
           test -f app/src/main/java/com/astra/ai/LiveAgentSession.kt
           test -f app/src/main/java/com/astra/ai/AstraCredentialVault.kt
+          test -f app/src/main/java/com/astra/ai/AstraAdvancedSettingsActivity.kt
           grep -q 'AstraAdvancedSettingsActivity' app/src/main/AndroidManifest.xml
           grep -q 'AstraVoiceInteractionSessionService' app/src/main/res/xml/voice_interaction_service.xml
           grep -q 'onAudioAvailable' app/src/main/java/com/astra/ai/AstraVoiceInteractionSession.kt
