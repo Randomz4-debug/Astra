@@ -46,6 +46,7 @@ jobs:
           python tools/upgrade_agent_brain_and_device_control.py
           python tools/fix_latest_compile.py
           python tools/upgrade_siri_ui.py
+          python tools/upgrade_multi_agent_smoothness.py
       - name: Verify critical Astra features
         shell: bash
         run: |
@@ -64,6 +65,7 @@ jobs:
           test -f app/src/main/java/com/astra/ai/AstraAutomationReceiver.kt
           test -f app/src/main/java/com/astra/ai/AstraCommandPlanner.kt
           test -f app/src/main/java/com/astra/ai/AstraAgenticExecutor.kt
+          test -f app/src/main/java/com/astra/ai/AstraMultiAgentRuntime.kt
           test -f app/src/main/java/com/astra/ai/AstraSiriVoiceInteractionSession.kt
           grep -q 'AstraConnectedAppsActivity' app/src/main/AndroidManifest.xml
           grep -q 'AstraAutomationActivity' app/src/main/AndroidManifest.xml
@@ -71,6 +73,7 @@ jobs:
           grep -q 'AstraVoiceInteractionSessionService' app/src/main/res/xml/voice_interaction_service.xml
           grep -q 'AstraSiriVoiceInteractionSession' app/src/main/java/com/astra/ai/AstraVoiceInteractionSessionService.kt
           grep -q 'AstraAgenticExecutor' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
+          grep -q 'AstraMultiAgentRuntime' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraCommandPlanner' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraAIProviderRouter' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraAutomationEngine' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
@@ -84,7 +87,7 @@ jobs:
           ! grep -q 'LaunchedEffect(page) { if (page == 1) discoverAllModels() }' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           grep -q 'Fetch OpenAI Models' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           grep -q 'Fetch Local Models' app/src/main/java/com/astra/ai/AstraMainActivity.kt
-          grep -q 'Siri-inspired UI upgrade applied' /dev/null || true
+          grep -q 'hasOpenAiApiKey' app/src/main/java/com/astra/ai/AstraViewModel.kt
       - name: Build unified debug APK
         shell: bash
         run: |
