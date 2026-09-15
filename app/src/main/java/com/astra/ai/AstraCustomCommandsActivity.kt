@@ -32,6 +32,7 @@ class AstraCustomCommandsActivity : ComponentActivity() {
     private var commands by mutableStateOf(emptyList<AstraCustomCommandStore.Command>())
     private var trigger by mutableStateOf("")
     private var actions by mutableStateOf("")
+    private var editingTrigger by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,13 +41,27 @@ class AstraCustomCommandsActivity : ComponentActivity() {
             MaterialTheme(colorScheme = androidx.compose.material3.darkColorScheme()) {
                 Column(Modifier.fillMaxSize().padding(16.dp)) {
                     Text("Custom Commands", style = MaterialTheme.typography.headlineMedium)
-                    Text("Each command gets the lowest available integer code starting at 0. Deleting a command compacts the remaining codes.", style = MaterialTheme.typography.bodySmall)
+                    Text("Create a trigger and a sequence of actions. Saved commands can be edited later.", style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(trigger, { trigger = it }, Modifier.fillMaxWidth(), label = { Text("Trigger text / voice phrase") }, singleLine = true)
-                    OutlinedTextField(actions, { actions = it }, Modifier.fillMaxWidth().height(120.dp), label = { Text("Actions separated by ;") }, supportingText = { Text("Example: open_app:YouTube;wait:1000;click:Search;type:hello\nChat automation: assist_chat") })
+                    OutlinedTextField(actions, { actions = it }, Modifier.fillMaxWidth().height(120.dp), label = { Text("Actions separated by ;") }, supportingText = { Text("Example: open_app:YouTube;wait:1000;click:Search;type:hello\nAlso: say:Hello;assist_chat;repeat:3,click:Like") })
                     Button(onClick = {
-                        runCatching { store.addOrUpdate(trigger, actions) }.onSuccess { trigger = ""; actions = ""; commands = store.list() }.onFailure { Toast.makeText(this@AstraCustomCommandsActivity, it.message ?: "Could not save", Toast.LENGTH_LONG).show() }
-                    }, Modifier.fillMaxWidth()) { Text("Save custom command") }
+                        runCatching {
+                            val old = editingTrigger
+                            if (old != null && !old.equals(trigger.trim(), true)) store.delete(old)
+                            store.addOrUpdate(trigger, actions)
+                        }.onSuccess {
+                            editingTrigger = null
+                            trigger = ""
+                            actions = ""
+                            commands = store.list()
+                        }.onFailure {
+                            Toast.makeText(this@AstraCustomCommandsActivity, it.message ?: "Could not save", Toast.LENGTH_LONG).show()
+                        }
+                    }, Modifier.fillMaxWidth()) { Text(if (editingTrigger == null) "Save custom command" else "Update custom command") }
+                    if (editingTrigger != null) {
+                        OutlinedButton(onClick = { editingTrigger = null; trigger = ""; actions = "" }, Modifier.fillMaxWidth()) { Text("Cancel edit") }
+                    }
                     Spacer(Modifier.height(12.dp))
                     Text("Default terminate command: say/type `terminate` to stop all active custom commands.", style = MaterialTheme.typography.bodySmall)
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -57,7 +72,12 @@ class AstraCustomCommandsActivity : ComponentActivity() {
                                     Text(c.actions, style = MaterialTheme.typography.bodySmall)
                                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Switch(checked = c.enabled, onCheckedChange = { store.setEnabled(c.trigger, it); commands = store.list() })
-                                        OutlinedButton(onClick = { store.delete(c.trigger); commands = store.list() }) { Text("Delete") }
+                                        OutlinedButton(onClick = { editingTrigger = c.trigger; trigger = c.trigger; actions = c.actions }) { Text("Edit") }
+                                        OutlinedButton(onClick = {
+                                            store.delete(c.trigger)
+                                            if (editingTrigger.equals(c.trigger, true)) { editingTrigger = null; trigger = ""; actions = "" }
+                                            commands = store.list()
+                                        }) { Text("Delete") }
                                     }
                                 }
                             }
