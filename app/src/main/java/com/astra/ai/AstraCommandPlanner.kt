@@ -8,12 +8,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /**
- * Small deterministic planner for multi-step natural-language commands.
- *
- * The normal command router is intentionally fast and deterministic, but it used to stop after
- * the first executable verb. This planner keeps the whole request alive: it executes the steps
- * that are actually supported, waits for the target app to settle, then hands the remaining
- * question to Astra's reasoning model with fresh screen context.
+ * Deterministic planner for multi-step natural-language commands.
+ * The old router returned after the first successful verb; this keeps the whole request alive.
  */
 class AstraCommandPlanner(context: Context) {
     data class Result(
@@ -28,7 +24,6 @@ class AstraCommandPlanner(context: Context) {
     suspend fun plan(input: String): Result? = withContext(Dispatchers.IO) {
         val clean = input.trim()
         if (clean.isBlank()) return@withContext null
-
         val steps = splitSteps(clean)
         if (steps.size < 2) return@withContext null
 
@@ -45,8 +40,8 @@ class AstraCommandPlanner(context: Context) {
                 }
                 executed++
                 if (isAppOpenStep(step)) {
-                    prepareOpenedApp(step)
-                    delay(1100)
+                    prepareOpenedApp(step, clean)
+                    delay(1300)
                 } else if (isNavigationStep(step)) {
                     delay(650)
                 }
@@ -60,21 +55,13 @@ class AstraCommandPlanner(context: Context) {
         if (lastFailure != null) return@withContext Result(true, toolFailure = lastFailure)
         if (remainder.isNullOrBlank()) return@withContext Result(true)
 
-        Result(
-            handled = true,
-            reasoningRequest = buildReasoningRequest(clean, remainder!!)
-        )
+        Result(true, reasoningRequest = buildReasoningRequest(clean, remainder!!))
     }
 
-    private fun splitSteps(text: String): List<String> {
-        // Only split when "and" is followed by an action/inspection verb. This avoids breaking
-        // ordinary sentences such as "open Maps and search for food and coffee" unnecessarily.
-        val parts = Regex(
-            "\\s+and\\s+(?=(?:open|launch|start|run|click|tap|type|enter|read|check|inspect|look|show|tell|find|search|scroll|go|take|capture|send|call|dial|reply|write|compose)\\b)",
-            RegexOption.IGNORE_CASE
-        ).split(text).map { it.trim() }.filter { it.isNotBlank() }
-        return parts
-    }
+    private fun splitSteps(text: String): List<String> = Regex(
+        "\\s+and\\s+(?=(?:open|launch|start|run|click|tap|type|enter|read|check|inspect|look|show|tell|find|search|scroll|go|take|capture|send|call|dial|reply|write|compose)\\b)",
+        RegexOption.IGNORE_CASE
+    ).split(text).map { it.trim() }.filter { it.isNotBlank() }
 
     private fun isAppOpenStep(step: String): Boolean = Regex(
         "^(?:please\\s+|could\\s+you\\s+|can\\s+you\\s+|hey\\s+astra\\s+|astra\\s+)*(?:open|launch|start|run)\\s+.+$",
@@ -86,43 +73,41 @@ class AstraCommandPlanner(context: Context) {
         RegexOption.IGNORE_CASE
     ).matches(step.trim())
 
-    private fun prepareOpenedApp(step: String) {
+    private fun prepareOpenedApp(step: String, wholeRequest: String) {
         val normalized = step.lowercase()
         if (!normalized.contains("whatsapp")) return
 
-        // WhatsApp's official Click-to-Chat link opens the conversation for a full international
-        // number. This is preferable to guessing at WhatsApp's changing search UI.
+        // WhatsApp officially supports Click-to-Chat links. Use the user's exact international
+        // number when present so the next screen is the requested conversation, not the home tab.
         val number = Regex("(?:\\+?\\d[\\d\\s().-]{7,}\\d)")
-            .find(step)
+            .find(wholeRequest)
             ?.value
             ?.filter { it.isDigit() }
             ?.takeIf { it.length >= 8 }
             ?: return
 
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$number"))
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        runCatching { app.startActivity(intent) }
+        runCatching {
+            app.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$number"))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
     }
 
-    private fun buildReasoningRequest(original: String, remainder: String): String {
-        val screen = AstraAccessibilityService.current()?.readScreen().orEmpty().trim()
-        return """
+    private fun buildReasoningRequest(original: String, remainder: String): String = """
 The user gave this multi-step request:
 $original
 
 Astra already executed the supported navigation steps. Now complete the remaining instruction:
 $remainder
 
-IMPORTANT EXECUTION/ACCURACY RULES:
-- Use the CURRENT SCREEN TEXT supplied by AstraAgentRuntime as the source of truth for what is visible.
-- If this is a WhatsApp/message-reading request, identify the requested conversation/sender first, then identify the most recent message actually visible from that sender.
-- Do not invent, reconstruct, or guess message contents. If the requested message is not visible or the sender cannot be verified, say exactly that and explain what Astra needs to do next.
-- Do not claim that a screen action happened unless the execution layer reported success.
-- Answer the user's actual question, not merely the fact that an app was opened.
-- If more screen navigation is genuinely necessary, describe the exact next action instead of pretending it happened.
-
-The screen snapshot observed immediately after navigation was:
-${if (screen.isBlank()) "(screen text unavailable)" else screen.take(18000)}
-        """.trimIndent()
-    }
+ACCURACY RULES:
+- Treat the live screen text as the source of truth for what is visible.
+- For a WhatsApp/message-reading request, verify the requested conversation/sender first, then identify the most recent message actually visible from that sender.
+- Never invent, reconstruct, or guess message contents.
+- If the requested message is not visible or the sender cannot be verified, say so clearly and state the next required screen action.
+- Never claim an action succeeded unless the execution layer reported success.
+- Answer the user's actual request rather than merely saying that an app was opened.
+- Do not expose unrelated private screen content.
+""".trimIndent()
 }
