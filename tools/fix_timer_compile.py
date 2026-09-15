@@ -39,49 +39,48 @@ if '"setTimer" -> device.timer' not in s:
         raise SystemExit("ToolRouter execution marker not found")
     s = s.replace(needle, repl)
 
-# Deterministic timer parser. Keep the Kotlin regex patterns free of unsupported
-# backslash escapes so this generated source compiles with Kotlin string literals.
-if "ASTRA_TIMER_HARDENED" not in s:
-    marker = '        if (lower == "custom commands" || lower == "open custom commands"'
-    i = s.find(marker)
-    if i < 0:
-        raise SystemExit("LocalCommandEngine insertion marker not found")
-    block = '''        // ASTRA_TIMER_HARDENED: deterministic timer commands bypass the LLM.
+marker = '        if (lower == "custom commands" || lower == "open custom commands"'
+start = s.find(marker)
+if start < 0:
+    raise SystemExit("LocalCommandEngine insertion marker not found")
+handle_start = s.rfind('    suspend fun handle(text: String): ToolResult?', 0, start)
+if handle_start < 0:
+    raise SystemExit("LocalCommandEngine.handle() not found")
+
+prefix = s[handle_start:start]
+prefix = re.sub(r'\n\s*// ASTRA_TIMER_HARDENED:.*?(?=\n\s*if \(lower == "custom commands")', '\n', prefix, flags=re.S)
+prefix = re.sub(r'\n\s*val timerSeconds = run \{.*?(?=\n\s*if \(lower == "custom commands")', '\n', prefix, flags=re.S)
+prefix = re.sub(r'\n\s*val timerSeconds = parseTimerSeconds\(t\).*?(?=\n\s*if \(lower == "custom commands")', '\n', prefix, flags=re.S)
+
+simple_timer = '''
+        // ASTRA_TIMER_HARDENED: deterministic timer parser without Kotlin regex escapes.
         val timerSeconds = run {
-            val compact = lower.replace(" ", "")
-            val hhmm = Regex("(?:timer|countdown).*?([0-9]{1,2}):([0-9]{2})").find(compact)
-            if (hhmm != null) {
-                (hhmm.groupValues[1].toInt() * 60 + hhmm.groupValues[2].toInt()).coerceAtLeast(1)
+            if (!lower.contains("timer") && !lower.contains("countdown")) {
+                null
             } else {
-                val m = Regex("([0-9]+(?:\\\\.[0-9]+)?)\\\\s*(seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h)").find(compact)
-                if (m == null || (!compact.contains("timer") && !compact.contains("countdown"))) null
-                else {
-                    val amount = m.groupValues[1].toDoubleOrNull()
-                    val unit = m.groupValues[2]
+                val colon = lower.indexOf(':')
+                if (colon > 0) {
+                    val left = lower.substring(0, colon).takeLastWhile { it.isDigit() }.toIntOrNull() ?: 0
+                    val right = lower.substring(colon + 1).takeWhile { it.isDigit() }.take(2).toIntOrNull() ?: 0
+                    (left * 60 + right).takeIf { it > 0 }
+                } else {
+                    val amountText = lower.dropWhile { !it.isDigit() }.takeWhile { it.isDigit() || it == '.' }
+                    val amount = amountText.toDoubleOrNull()
                     amount?.let {
                         when {
-                            unit.startsWith("h") -> (it * 3600).toInt()
-                            unit.startsWith("m") -> (it * 60).toInt()
+                            lower.contains("hour") || lower.contains(" hr") || lower.endsWith("h") -> (it * 3600).toInt()
+                            lower.contains("minute") || lower.contains(" min") || lower.endsWith("m") -> (it * 60).toInt()
                             else -> it.toInt()
                         }.takeIf { seconds -> seconds > 0 }
                     }
                 }
             }
         }
-        if (timerSeconds != null && (lower.contains("timer") || lower.contains("countdown"))) {
+        if (timerSeconds != null) {
             return router.execute("setTimer", mapOf("seconds" to timerSeconds.toString(), "skipUi" to "false"))
         }
-
 '''
-    s = s[:i] + block + s[i:]
 
-# Remove legacy injected timer code if an older workflow left it behind.
-s = re.sub(
-    r'\n\s*val timerSeconds = parseTimerSeconds\(t\).*?\n\s*\}\n',
-    '\n',
-    s,
-    flags=re.S,
-)
-
+s = s[:handle_start] + prefix + simple_timer + s[start:]
 p.write_text(s, encoding="utf-8")
 print("Timer compile/runtime fix applied.")
