@@ -53,6 +53,7 @@ jobs:
           python tools/upgrade_screen_agent_translation.py
           python tools/fix_screen_agent_compile.py
           python tools/final_realtime_upgrade.py
+          python tools/final_realtime_hardening.py
           python tools/fix_realtime_compile.py
       - name: Verify critical Astra features
         shell: bash
@@ -76,11 +77,13 @@ jobs:
           test -f app/src/main/java/com/astra/ai/AstraSiriVoiceInteractionSession.kt
           test -f app/src/main/java/com/astra/ai/AstraPromptTranslationService.kt
           test -f app/src/main/java/com/astra/ai/AstraRealtimeCore.kt
+          test -f app/src/main/java/com/astra/ai/AstraRealtimeVisionAnalyzer.kt
           test -f tools/final_ui_performance_cleanup.py
           test -f tools/fix_openai_ui_and_compile.py
           test -f tools/upgrade_screen_agent_translation.py
           test -f tools/fix_screen_agent_compile.py
           test -f tools/final_realtime_upgrade.py
+          test -f tools/final_realtime_hardening.py
           test -f tools/fix_realtime_compile.py
           grep -q 'AstraConnectedAppsActivity' app/src/main/AndroidManifest.xml
           grep -q 'AstraAutomationActivity' app/src/main/AndroidManifest.xml
@@ -97,7 +100,11 @@ jobs:
           grep -q 'readInteractiveScreen' app/src/main/java/com/astra/ai/AstraAccessibilityService.kt
           grep -q 'clickTextNormalized' app/src/main/java/com/astra/ai/AstraAccessibilityService.kt
           grep -q 'scrollSemantic' app/src/main/java/com/astra/ai/AstraAccessibilityService.kt
+          grep -q 'longPress' app/src/main/java/com/astra/ai/AstraAccessibilityService.kt
+          grep -q 'doubleTap' app/src/main/java/com/astra/ai/AstraAccessibilityService.kt
           grep -q 'waitForUiChange' app/src/main/java/com/astra/ai/AstraAgenticExecutor.kt
+          grep -q 'setTimer' app/src/main/java/com/astra/ai/AstraTooling.kt
+          grep -q 'AlarmClock.ACTION_SET_TIMER' app/src/main/java/com/astra/ai/AstraTooling.kt
           grep -q 'timer' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraAdvancedSettingsActivity' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           grep -q 'AstraVoiceActivity' app/src/main/java/com/astra/ai/AstraMainActivity.kt
