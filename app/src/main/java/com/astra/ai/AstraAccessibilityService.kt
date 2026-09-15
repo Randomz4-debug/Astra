@@ -3,12 +3,15 @@ package com.astra.ai
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.accessibilityservice.GestureDescription
+import android.graphics.Bitmap
 import android.graphics.Path
 import android.os.Bundle
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlin.coroutines.resume
 
 class AstraAccessibilityService : AccessibilityService() {
     companion object {
@@ -20,9 +23,7 @@ class AstraAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         instance = this
-        serviceInfo = serviceInfo.apply {
-            flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
-        }
+        serviceInfo = serviceInfo.apply { flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -39,6 +40,30 @@ class AstraAccessibilityService : AccessibilityService() {
     }
 
     fun readScreen(): String = _screenText.value
+
+    suspend fun readScreenWithOcr(): String {
+        val text = readScreen().trim()
+        if (text.isNotBlank()) return text
+        if (android.os.Build.VERSION.SDK_INT < 30) return ""
+        return suspendCancellableCoroutine { cont ->
+            runCatching {
+                takeScreenshot(displayId, mainExecutor, object : TakeScreenshotCallback {
+                    override fun onSuccess(result: ScreenshotResult) {
+                        runCatching {
+                            val bitmap = Bitmap.wrapHardwareBuffer(result.hardwareBuffer, result.colorSpace)
+                            if (bitmap == null) { if (cont.isActive) cont.resume(""); return@runCatching }
+                            Thread {
+                                val answer = runCatching { kotlinx.coroutines.runBlocking { LocalOcrEngine().read(bitmap) } }.getOrDefault("")
+                                bitmap.recycle()
+                                if (cont.isActive) cont.resume(answer)
+                            }.start()
+                        }.onFailure { if (cont.isActive) cont.resume("") }
+                    }
+                    override fun onFailure(errorCode: Int) { if (cont.isActive) cont.resume("") }
+                })
+            }.onFailure { if (cont.isActive) cont.resume("") }
+        }
+    }
 
     fun clickText(text: String): Boolean {
         val node = findText(rootInActiveWindow, text) ?: return false
@@ -86,8 +111,7 @@ class AstraAccessibilityService : AccessibilityService() {
 
     private fun findText(node: AccessibilityNodeInfo?, wanted: String): AccessibilityNodeInfo? {
         if (node == null) return null
-        val value = node.text?.toString().orEmpty()
-        val desc = node.contentDescription?.toString().orEmpty()
+        val value = node.text?.toString().orEmpty(); val desc = node.contentDescription?.toString().orEmpty()
         if (value.equals(wanted, true) || value.contains(wanted, true) || desc.equals(wanted, true) || desc.contains(wanted, true)) return node
         for (i in 0 until node.childCount) findText(node.getChild(i), wanted)?.let { return it }
         return null
@@ -114,7 +138,6 @@ class AstraAccessibilityService : AccessibilityService() {
             n.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { out.append(it).append('\n') }
             for (i in 0 until n.childCount) n.getChild(i)?.let(::walk)
         }
-        walk(node)
-        return out.toString()
+        walk(node); return out.toString()
     }
 }
