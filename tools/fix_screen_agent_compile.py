@@ -13,6 +13,7 @@ p.write_text(s, encoding='utf-8')
 
 p = ROOT / 'AstraAgentRuntime.kt'
 s = p.read_text(encoding='utf-8')
+s = s.replace('AstraPromptTranslationService(appContext)', 'AstraPromptTranslationService()')
 if 'private fun shouldUseMultiAgent' not in s:
     marker = '    private fun isGreeting(text: String): Boolean {'
     helper = '''    private fun shouldUseMultiAgent(text: String): Boolean {
