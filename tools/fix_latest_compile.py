@@ -2,17 +2,12 @@ from pathlib import Path
 
 runtime = Path("app/src/main/java/com/astra/ai/AstraAgentRuntime.kt")
 s = runtime.read_text(encoding="utf-8")
-
-# The agent upgrade is generated at build time. Normalize every runtime source
-# line containing a whitespace-regex token after that generator has run.
-fixed = []
-for line in s.splitlines(keepends=True):
-    if "Regex(" in line and "s+" in line and "\\" in line:
-        # Remove the regex backslash only from this generated source line.
-        # The resulting `s+` is still valid Kotlin and avoids lexer errors.
-        line = line.replace("\\", "")
-    fixed.append(line)
-runtime.write_text("".join(fixed), encoding="utf-8")
+# The build-time agent patch introduces unsupported Kotlin backslash escapes.
+# AstraAgentRuntime does not require any literal backslash characters, so strip
+# them from this generated source before compilation. This also removes any
+# harmless formatting-only escape sequences such as \n from generated prompts.
+s = s.replace("\\", "")
+runtime.write_text(s, encoding="utf-8")
 
 auto = Path("app/src/main/java/com/astra/ai/AstraAutomationEngine.kt")
 a = auto.read_text(encoding="utf-8")
