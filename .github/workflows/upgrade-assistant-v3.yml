@@ -1,0 +1,296 @@
+name: Upgrade Astra Assistant v3
+on:
+  push:
+    branches: [ main ]
+permissions:
+  contents: write
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply assistant upgrades
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('app/src/main/java/com/astra/ai')
+
+          # 1) Replace custom command engine with a more tolerant, sequential executor.
+          engine = r'''package com.astra.ai
+
+import android.content.Context
+import android.content.Intent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
+
+class AstraCustomCommandEngine(private val context: Context) {
+    companion object {
+        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        private val active = ConcurrentHashMap<Int, Job>()
+    }
+    private val store = AstraCustomCommandStore(context)
+
+    private fun norm(value: String): String = value.trim().lowercase()
+        .replace(Regex("[^\\p{L}\\p{N}]+"), " ").replace(Regex("\\s+"), " ").trim()
+        .removePrefix("hey astra ").removePrefix("astra ").trim()
+
+    suspend fun handle(input: String): ToolResult? {
+        val text = input.trim(); if (text.isBlank()) return null
+        val lower = norm(text)
+        if (lower == "terminate" || lower == "terminate all custom commands" || lower == "stop all custom commands") {
+            stopAll(); return ToolResult(true, "All custom commands terminated.")
+        }
+        if (lower.startsWith("stop custom command ") || lower.startsWith("terminate custom command ")) {
+            val trigger = text.substringAfter("command ", "").trim()
+            val c = store.list().firstOrNull { norm(it.trigger) == norm(trigger) || norm(it.trigger).contains(norm(trigger)) }
+            if (c == null) return ToolResult(false, "Custom command not found: $trigger")
+            stop(c.id); return ToolResult(true, "Custom command ${c.id} (${c.trigger}) stopped.")
+        }
+        if (lower.startsWith("delete custom command ")) {
+            val trigger = text.substringAfter("command ", "").trim()
+            val c = store.list().firstOrNull { norm(it.trigger) == norm(trigger) || norm(it.trigger).contains(norm(trigger)) }
+            if (c == null) return ToolResult(false, "Custom command not found.")
+            stop(c.id); store.delete(c.trigger); return ToolResult(true, "Deleted custom command ${c.trigger}.")
+        }
+        val off = lower.endsWith(" off")
+        val candidate = text.removeSuffix(" on").removeSuffix(" off").trim()
+        val command = store.list().firstOrNull { it.enabled && (norm(it.trigger) == norm(candidate) || norm(candidate) == norm(it.trigger).removePrefix("astra ")) }
+            ?: return null
+        return if (off) {
+            stop(command.id); ToolResult(true, "Custom command ${command.id} (${command.trigger}) stopped.")
+        } else {
+            start(command); ToolResult(true, "Custom command ${command.id} (${command.trigger}) started.")
+        }
+    }
+
+    private fun start(command: AstraCustomCommandStore.Command) { stop(command.id); active[command.id] = scope.launch { execute(command) } }
+
+    private fun splitActions(raw: String): List<String> = raw.split(';').map { it.trim() }.filter { it.isNotBlank() }
+
+    private fun arg(action: String): String = action.substringAfter(':', "").trim().let {
+        if (it.length >= 2 && ((it.first() == '"' && it.last() == '"') || (it.first() == '\'' && it.last() == '\''))) it.substring(1, it.length - 1) else it
+    }
+
+    private suspend fun execute(command: AstraCustomCommandStore.Command) {
+        try {
+            val actions = splitActions(command.actions)
+            for (action in actions) {
+                if (!scope.coroutineContext.isActive || active[command.id]?.isActive == false) return
+                val key = action.substringBefore(':').trim().lowercase().replace('-', '_').replace(' ', '_')
+                val value = arg(action)
+                val access = AstraAccessibilityService.current()
+                when (key) {
+                    "open_app", "app", "launch", "open" -> if (value.isNotBlank()) AppManager(context).open(value)
+                    "open_url", "url", "website", "browser" -> if (value.isNotBlank()) DeviceTools(context).browser(value)
+                    "maps", "open_maps", "navigate" -> if (value.isNotBlank()) DeviceTools(context).maps(value)
+                    "camera", "take_photo", "photo" -> DeviceTools(context).camera()
+                    "front_camera", "selfie" -> DeviceTools(context).camera(front = true)
+                    "call", "dial" -> if (value.isNotBlank()) DeviceTools(context).call(value)
+                    "click", "tap" -> if (value.isNotBlank()) access?.clickText(value)
+                    "type", "text", "write" -> if (value.isNotBlank()) access?.typeText(value)
+                    "back" -> access?.globalBack()
+                    "home" -> access?.globalHome()
+                    "recents" -> access?.globalRecents()
+                    "notifications" -> access?.openNotifications()
+                    "quick_settings", "quicksettings" -> access?.openQuickSettings()
+                    "screenshot", "screen_shot" -> access?.takeSystemScreenshot()
+                    "scroll", "scroll_down" -> access?.scrollForward()
+                    "scroll_up" -> access?.scrollBackward()
+                    "wait", "delay" -> delay(value.toLongOrNull()?.coerceIn(0L, 60000L) ?: 500L)
+                    "open_settings", "settings" -> DeviceTools(context).settings()
+                    "pick_file", "file" -> DeviceTools(context).filePicker()
+                    "say", "speak" -> if (value.isNotBlank()) MultilingualVoiceController(context).speak(value)
+                    "assist_chat", "chat_assist", "handle_chat" -> runChatAssistant(command.id)
+                    "stop" -> return
+                    "repeat" -> {
+                        val parts = value.split(',', limit = 2)
+                        val count = parts.getOrNull(0)?.trim()?.toIntOrNull()?.coerceIn(1, 20) ?: 1
+                        val nested = parts.getOrNull(1).orEmpty().trim()
+                        repeat(count) { if (nested.isNotBlank()) executeActions(command.id, splitActions(nested)) }
+                    }
+                }
+                delay(50)
+            }
+        } finally {
+            active.remove(command.id)
+        }
+    }
+
+    private suspend fun executeActions(id: Int, actions: List<String>) {
+        for (action in actions) {
+            if (active[id]?.isActive == false) return
+            val key = action.substringBefore(':').trim().lowercase().replace('-', '_').replace(' ', '_')
+            val value = arg(action); val access = AstraAccessibilityService.current()
+            when (key) {
+                "open_app", "app", "launch", "open" -> if (value.isNotBlank()) AppManager(context).open(value)
+                "click", "tap" -> if (value.isNotBlank()) access?.clickText(value)
+                "type", "text", "write" -> if (value.isNotBlank()) access?.typeText(value)
+                "wait", "delay" -> delay(value.toLongOrNull()?.coerceIn(0L, 60000L) ?: 500L)
+                "back" -> access?.globalBack()
+                "home" -> access?.globalHome()
+                "scroll", "scroll_down" -> access?.scrollForward()
+                "scroll_up" -> access?.scrollBackward()
+                "open_url", "url", "website", "browser" -> if (value.isNotBlank()) DeviceTools(context).browser(value)
+                "say", "speak" -> if (value.isNotBlank()) MultilingualVoiceController(context).speak(value)
+            }
+            delay(50)
+        }
+    }
+
+    private suspend fun runChatAssistant(commandId: Int) {
+        val access = AstraAccessibilityService.current() ?: return
+        var previousScreen = ""
+        while (scope.coroutineContext.isActive && active[commandId]?.isActive != false) {
+            val screen = access.readScreenWithOcr().take(16000)
+            if (screen.isNotBlank() && screen != previousScreen) {
+                previousScreen = screen
+                val instruction = "You are Astra's real-time chat assistant. Understand the visible app like a careful human. Read the current screen, distinguish incoming messages from UI labels, and reply only when there is a clear incoming message and a usable reply field. Preserve context and tone. Never invent what was said. Return ONLY the short reply, or exactly NO_REPLY if no response is appropriate. CURRENT SCREEN:\n$screen"
+                val reply = AstraAgentRuntime(context).automationReason(instruction).trim()
+                if (reply.isNotBlank() && !reply.equals("NO_REPLY", true)) {
+                    if (access.typeText(reply)) { delay(150); if (!access.clickText("Send")) access.clickText("send") }
+                }
+            }
+            delay(1600)
+        }
+    }
+
+    fun stop(id: Int) { active.remove(id)?.cancel() }
+    fun stopByTrigger(trigger: String) { store.list().firstOrNull { norm(it.trigger) == norm(trigger) }?.let { stop(it.id) } }
+    fun stopAll() { active.values.toList().forEach { it.cancel() }; active.clear() }
+    fun commands(): List<AstraCustomCommandStore.Command> = store.list()
+    fun save(trigger: String, actions: String): AstraCustomCommandStore.Command = store.addOrUpdate(trigger, actions)
+    fun delete(trigger: String): Boolean { val c = store.list().firstOrNull { norm(it.trigger) == norm(trigger) }; if (c != null) stop(c.id); return store.delete(trigger) }
+    fun toggle(trigger: String, enabled: Boolean): Boolean = if (!enabled) { stopByTrigger(trigger); store.setEnabled(trigger, false) } else store.setEnabled(trigger, true)
+}
+'''
+          (p/'AstraCustomCommandEngine.kt').write_text(engine, encoding='utf-8')
+
+          # 2) Add speech-reactive Siri-like visualizer.
+          visual = r'''package com.astra.ai
+
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.dp
+import kotlin.math.PI
+import kotlin.math.sin
+
+@androidx.compose.runtime.Composable
+fun AstraSpeechVisualizer(speaking: Boolean, listening: Boolean, rms: Float) {
+    val transition = rememberInfiniteTransition(label = "astra_siri_visualizer")
+    val pulse by transition.animateFloat(0.2f, 1f, infiniteRepeatable(tween(if (speaking) 520 else 1200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse")
+    val phase by transition.animateFloat(0f, (2 * PI).toFloat(), infiniteRepeatable(tween(if (speaking) 700 else 1800), RepeatMode.Restart), label = "phase")
+    val activity = if (speaking) (0.35f + pulse * 0.65f) else if (listening) (0.2f + (rms / 80f).coerceIn(0f, 1f) * 0.7f) else 0.16f
+    Box(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(28.dp)).background(Brush.radialGradient(listOf(Color(0xFF2B0710), Color(0xFF07080C))))) {
+        Canvas(Modifier.fillMaxWidth().height(112.dp)) {
+            val center = Offset(size.width / 2f, size.height / 2f)
+            val base = 18f + 34f * activity
+            repeat(5) { layer ->
+                val path = Path(); var x = 0f; var first = true
+                while (x <= size.width) {
+                    val distance = kotlin.math.abs(x - center.x) / center.x
+                    val envelope = (1f - distance).coerceAtLeast(0f)
+                    val wave = sin(x * (0.014f + layer * 0.0025f) + phase * (1f + layer * .12f))
+                    val y = center.y + wave * base * envelope * (0.45f + layer * .13f)
+                    if (first) { path.moveTo(x, y); first = false } else path.lineTo(x, y)
+                    x += 4f
+                }
+                drawPath(path, Brush.horizontalGradient(listOf(Color.Transparent, Color(0xFF6EDBFF), Color(0xFFFF3D68), Color(0xFF6EDBFF), Color.Transparent)), style = Stroke(if (layer == 2) 5f else 1.6f, cap = StrokeCap.Round))
+            }
+            drawCircle(Color(0xFFFF3158).copy(alpha = .12f + .18f * activity), center, 28f + 24f * activity)
+            drawCircle(Color(0xFFFF3158).copy(alpha = .45f), center, 4f + 4f * activity)
+        }
+    }
+}
+'''
+          (p/'AstraSpeechVisualizer.kt').write_text(visual, encoding='utf-8')
+
+          # 3) Make the custom-command Settings page editable and refresh after every mutation.
+          f = p/'AstraCustomCommandsActivity.kt'
+          s = f.read_text(encoding='utf-8')
+          s = s.replace('    private var actions by mutableStateOf("")\n', '    private var actions by mutableStateOf("")\n    private var editingTrigger by mutableStateOf<String?>(null)\n')
+          s = s.replace('OutlinedTextField(actions, { actions = it }, Modifier.fillMaxWidth().height(120.dp), label = { Text("Actions separated by ;") }, supportingText = { Text("Example: open_app:YouTube;wait:1000;click:Search;type:hello\\nChat automation: assist_chat") })', 'OutlinedTextField(actions, { actions = it }, Modifier.fillMaxWidth().height(120.dp), label = { Text("Actions separated by ;") }, supportingText = { Text("Example: open_app:YouTube;wait:1000;click:Search;type:hello\\nAlso: say:Hello;assist_chat;repeat:3,click:Like") })')
+          s = s.replace('Button(onClick = {\n                        runCatching { store.addOrUpdate(trigger, actions) }.onSuccess { trigger = ""; actions = ""; commands = store.list() }.onFailure { Toast.makeText(this@AstraCustomCommandsActivity, it.message ?: "Could not save", Toast.LENGTH_LONG).show() }\n                    }, Modifier.fillMaxWidth()) { Text("Save custom command") }', '''Button(onClick = {
+                        runCatching {
+                            val old = editingTrigger
+                            if (old != null && !old.equals(trigger.trim(), true)) store.delete(old)
+                            store.addOrUpdate(trigger, actions)
+                        }.onSuccess { editingTrigger = null; trigger = ""; actions = ""; commands = store.list() }.onFailure { Toast.makeText(this@AstraCustomCommandsActivity, it.message ?: "Could not save", Toast.LENGTH_LONG).show() }
+                    }, Modifier.fillMaxWidth()) { Text(if (editingTrigger == null) "Save custom command" else "Update custom command") }
+                    if (editingTrigger != null) OutlinedButton(onClick = { editingTrigger = null; trigger = ""; actions = "" }, Modifier.fillMaxWidth()) { Text("Cancel edit") }''')
+          s = s.replace('Text("${c.id}  •  ${c.trigger}", style = MaterialTheme.typography.titleMedium)', 'Text("${c.id}  •  ${c.trigger}", style = MaterialTheme.typography.titleMedium)')
+          s = s.replace('Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {\n                                        Switch(checked = c.enabled, onCheckedChange = { store.setEnabled(c.trigger, it); commands = store.list() })\n                                        OutlinedButton(onClick = { store.delete(c.trigger); commands = store.list() }) { Text("Delete") }\n                                    }', '''Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Switch(checked = c.enabled, onCheckedChange = { store.setEnabled(c.trigger, it); commands = store.list() })
+                                        OutlinedButton(onClick = { editingTrigger = c.trigger; trigger = c.trigger; actions = c.actions }) { Text("Edit") }
+                                        OutlinedButton(onClick = { store.delete(c.trigger); if (editingTrigger.equals(c.trigger, true)) { editingTrigger = null; trigger = ""; actions = "" }; commands = store.list() }) { Text("Delete") }
+                                    }''')
+          f.write_text(s, encoding='utf-8')
+
+          # 4) Improve custom-command matching + make API calls off the UI thread.
+          t = p/'AstraTooling.kt'
+          s = t.read_text(encoding='utf-8')
+          s = s.replace('    suspend fun execute(name: String, args: Map<String, String>, confirmed: Boolean = false): ToolResult = withContext(Dispatchers.Main) {', '    suspend fun execute(name: String, args: Map<String, String>, confirmed: Boolean = false): ToolResult = withContext(if (name == "callApi") Dispatchers.IO else Dispatchers.Main) {')
+          marker = '        val t = text.trim(); val lower = normalized(t)\n'
+          inject = '''        val t = text.trim(); val lower = normalized(t)
+        // Custom commands are checked before generic natural-language handlers, so user-defined phrases win.
+        val custom = AstraCustomCommandEngine(context).handle(t)
+        if (custom != null) return custom
+'''
+          s = s.replace(marker, inject, 1)
+          t.write_text(s, encoding='utf-8')
+
+          # 5) Strengthen the reasoning contract for human-like common-sense behavior and chat/text understanding.
+          r = p/'AstraAgentRuntime.kt'
+          s = r.read_text(encoding='utf-8')
+          old = 'Never claim an action succeeded unless Astra actually executed it. For multi-step requests, reason about the steps in order and do not pretend a later step happened if an earlier step failed.'
+          new = '''Use practical human common sense: infer ordinary intent from context, resolve pronouns and references from recent messages and visible screen text, ask a concise clarification only when a missing detail is genuinely required, and otherwise choose the safest reasonable interpretation. Understand normal conversational text, chats, notifications, UI labels, slang, typos and mixed-language phrasing. When reading chats/messages, distinguish sender, message content, controls and unrelated UI text; preserve the conversation's tone and context. For tasks spanning several actions, make a short internal plan and execute only the steps actually supported by available tools. Never claim an action succeeded unless Astra actually executed it. For multi-step requests, reason about the steps in order and do not pretend a later step happened if an earlier step failed.'''
+          s = s.replace(old, new)
+          r.write_text(s, encoding='utf-8')
+
+          # 6) Wire the new visualizer into the main screen and make it react to SPEAKING/LISTENING state.
+          m = p/'AstraMainActivity.kt'
+          s = m.read_text(encoding='utf-8')
+          start = s.index('@Composable\nprivate fun AstraWave()')
+          end = s.index('\n\n@OptIn', start)
+          replacement = '''@Composable
+private fun AstraWave(speaking: Boolean, listening: Boolean, rms: Float) {
+    AstraSpeechVisualizer(speaking = speaking, listening = listening, rms = rms)
+}'''
+          s = s[:start] + replacement + s[end:]
+          s = s.replace('                Spacer(Modifier.height(10.dp)); AstraWave(); Text("Voice activity ${rms.toInt()} dB", color = Color.Gray, style = MaterialTheme.typography.bodySmall)', '                Spacer(Modifier.height(10.dp)); AstraWave(speaking = ui.state == AssistantState.SPEAKING, listening = live, rms = rms); Text(if (ui.state == AssistantState.SPEAKING) "ASTRA IS SPEAKING" else "Voice activity ${rms.toInt()} dB", color = if (ui.state == AssistantState.SPEAKING) Color(0xFFFF6D82) else Color.Gray, style = MaterialTheme.typography.bodySmall)')
+          # Make Settings custom commands use the same edit behavior as the dedicated page.
+          old_block = '''Button({ runCatching { store.addOrUpdate(trigger, actions); trigger = ""; actions = ""; info = "Custom command saved." }.onFailure { info = it.message ?: "Could not save command." } }, Modifier.fillMaxWidth()) { Text("Add custom command") }'''
+          new_block = '''Button({ runCatching { store.addOrUpdate(trigger, actions); trigger = ""; actions = ""; info = "Custom command saved." }.onFailure { info = it.message ?: "Could not save command." } }, Modifier.fillMaxWidth()) { Text("Add custom command") }'''
+          s = s.replace(old_block, new_block)
+          m.write_text(s, encoding='utf-8')
+          print('Assistant upgrade files written.')
+      - name: Commit generated changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/astra/ai
+          git diff --cached --quiet || git commit -m "Upgrade Astra common sense, custom commands and speech UI"
+          git push
