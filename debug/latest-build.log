@@ -20,14 +20,14 @@ Daemon will be stopped at the end of the build
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
-> Task :app:processDebugManifestForPackage
-> Task :app:compressDebugAssets
 > Task :app:desugarDebugFileDependencies
+> Task :app:compressDebugAssets
+> Task :app:processDebugManifestForPackage
 > Task :app:mergeDebugJniLibFolders
 > Task :app:checkDebugDuplicateClasses
 > Task :app:mergeLibDexDebug
-> Task :app:processDebugResources
 > Task :app:mergeDebugNativeLibs
+> Task :app:processDebugResources
 > Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
 > Task :app:writeDebugSigningConfigVersions
@@ -45,7 +45,7 @@ e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAcce
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAgentRuntime.kt:110:13 Unresolved reference 'shouldUseMultiAgent'.
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraPromptTranslationService.kt:6:38 Unresolved reference 'DownloadConditions'.
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraPromptTranslationService.kt:39:30 Unresolved reference 'DownloadConditions'.
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789487444690.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789487575483.json
 
 FAILURE: Build failed with an exception.
 
@@ -249,5 +249,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 41s
+BUILD FAILED in 46s
 28 actionable tasks: 28 executed
