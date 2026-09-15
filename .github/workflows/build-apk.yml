@@ -41,6 +41,7 @@ jobs:
           python tools/harden_ai_routing_and_settings.py
           python tools/add_connection_commands.py
           python tools/fix_ai_model_ui_and_openai_lag.py
+          python tools/add_automation_brain.py
       - name: Verify critical Astra features
         shell: bash
         run: |
@@ -54,13 +55,20 @@ jobs:
           test -f app/src/main/java/com/astra/ai/AstraAIProviderRouter.kt
           test -f app/src/main/java/com/astra/ai/AstraConnectedAppsActivity.kt
           test -f app/src/main/java/com/astra/ai/AstraAdvancedSettingsActivity.kt
+          test -f app/src/main/java/com/astra/ai/AstraAutomationEngine.kt
+          test -f app/src/main/java/com/astra/ai/AstraAutomationActivity.kt
+          test -f app/src/main/java/com/astra/ai/AstraAutomationReceiver.kt
           test -f app/src/main/java/com/astra/ai/AstraCommandPlanner.kt
           grep -q 'AstraConnectedAppsActivity' app/src/main/AndroidManifest.xml
+          grep -q 'AstraAutomationActivity' app/src/main/AndroidManifest.xml
+          grep -q 'AstraAutomationReceiver' app/src/main/AndroidManifest.xml
           grep -q 'AstraVoiceInteractionSessionService' app/src/main/res/xml/voice_interaction_service.xml
           grep -q 'onAudioAvailable' app/src/main/java/com/astra/ai/AstraVoiceInteractionSession.kt
           grep -q 'AstraAgentRuntime(sessionContext)' app/src/main/java/com/astra/ai/AstraVoiceInteractionSession.kt
           grep -q 'AstraCommandPlanner' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraAIProviderRouter' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
+          grep -q 'AstraAutomationEngine' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
+          grep -q 'AstraAutomationActivity' app/src/main/java/com/astra/ai/AstraAgentRuntime.kt
           grep -q 'AstraAdvancedSettingsActivity' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           ! grep -q 'endpoint.contains(":12434")' app/src/main/java/com/astra/ai/AstraMainActivity.kt
           ! grep -q 'u.port == 12434' app/src/main/java/com/astra/ai/LocalAiGateway.kt
