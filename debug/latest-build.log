@@ -11,8 +11,8 @@ Daemon will be stopped at the end of the build
 > Task :app:packageDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
-> Task :app:mergeDebugResources
 > Task :app:parseDebugLocalResources
+> Task :app:mergeDebugResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
 > Task :app:javaPreCompileDebug
@@ -27,22 +27,20 @@ Daemon will be stopped at the end of the build
 > Task :app:checkDebugDuplicateClasses
 > Task :app:mergeDebugNativeLibs
 > Task :app:processDebugResources
-> Task :app:validateSigningDebug
 > Task :app:mergeLibDexDebug
-> Task :app:writeDebugAppMetadata
-> Task :app:writeDebugSigningConfigVersions
 
 > Task :app:stripDebugDebugSymbols
 Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libimage_processing_util_jni.so, liblanguage_id_l2c_jni.so, libmlkit_google_ocr_pipeline.so, libsurface_util_jni.so, libtranslate_jni.so.
 
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
 > Task :app:mergeExtDexDebug
 
-> Task :app:compileDebugKotlin
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraSiriVoiceInteractionSession.kt:71:59 Unresolved reference 'hintTextColor'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraSiriVoiceInteractionSession.kt:127:680 Argument type mismatch: actual type is 'Double', but 'Float' was expected.
-
 > Task :app:compileDebugKotlin FAILED
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789478482062.json
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMultiAgentRuntime.kt:42:58 No value passed for parameter 'steps'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMultiAgentRuntime.kt:85:68 Suspend function 'suspend fun contextText(maxFiles: Int = ..., maxCharsPerFile: Int = ..., maxTotalChars: Int = ...): String' can only be called from a coroutine or another suspend function.
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789482928804.json
 
 FAILURE: Build failed with an exception.
 
@@ -304,5 +302,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 36s
+BUILD FAILED in 42s
 28 actionable tasks: 28 executed
