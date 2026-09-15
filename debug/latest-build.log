@@ -20,26 +20,33 @@ Daemon will be stopped at the end of the build
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
-> Task :app:desugarDebugFileDependencies
-> Task :app:compressDebugAssets
 > Task :app:processDebugManifestForPackage
-> Task :app:checkDebugDuplicateClasses
+> Task :app:desugarDebugFileDependencies
 > Task :app:mergeDebugJniLibFolders
-> Task :app:mergeLibDexDebug
+> Task :app:compressDebugAssets
+> Task :app:checkDebugDuplicateClasses
 > Task :app:mergeDebugNativeLibs
 > Task :app:processDebugResources
-> Task :app:validateSigningDebug
-> Task :app:writeDebugAppMetadata
-> Task :app:writeDebugSigningConfigVersions
+> Task :app:mergeLibDexDebug
 
 > Task :app:stripDebugDebugSymbols
 Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libimage_processing_util_jni.so, liblanguage_id_l2c_jni.so, libmlkit_google_ocr_pipeline.so, libsurface_util_jni.so, libtranslate_jni.so.
 
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
 > Task :app:mergeExtDexDebug
 
+> Task :app:compileDebugKotlin
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:282:74 Unresolved reference 'openAiModels'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:282:89 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:282:89 Not enough information to infer type argument for 'T'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:291:76 Unresolved reference 'openAiModels'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:291:91 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:291:91 Not enough information to infer type argument for 'T'.
+
 > Task :app:compileDebugKotlin FAILED
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMultiAgentRuntime.kt:85:68 Suspend function 'suspend fun contextText(maxFiles: Int = ..., maxCharsPerFile: Int = ..., maxTotalChars: Int = ...): String' can only be called from a coroutine or another suspend function.
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789482968799.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789484546781.json
 
 FAILURE: Build failed with an exception.
 
