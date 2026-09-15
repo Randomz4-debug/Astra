@@ -16,6 +16,7 @@
         <activity android:name=".AstraMainActivity" android:exported="true" android:label="Astra"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter><intent-filter><action android:name="android.intent.action.ASSIST"/><category android:name="android.intent.category.DEFAULT"/></intent-filter></activity>
         <activity android:name=".AstraAdvancedSettingsActivity" android:exported="false" android:label="Astra Advanced Settings"/>
         <activity android:name=".AstraConnectedAppsActivity" android:exported="false" android:label="Connected Apps"/>
+        <activity android:name=".AstraAutomationActivity" android:exported="false" android:label="Astra Automations"/>
         <activity android:name=".AstraChatActivity" android:exported="false" android:label="Astra Chat"/>
         <activity android:name=".AstraFilePickerActivity" android:exported="false" android:label="Astra File"/>
         <activity android:name=".AstraApiActivity" android:exported="false" android:label="Astra API Hub" />
@@ -29,5 +30,6 @@
         <service android:name=".AstraVoiceInteractionService" android:label="Astra Assistant" android:permission="android.permission.BIND_VOICE_INTERACTION" android:exported="true" android:directBootAware="true"><intent-filter><action android:name="android.service.voice.VoiceInteractionService"/></intent-filter><meta-data android:name="android.voice_interaction" android:resource="@xml/voice_interaction_service"/></service>
         <service android:name=".AstraVoiceInteractionSessionService" android:label="Astra Voice Session" android:permission="android.permission.BIND_VOICE_INTERACTION" android:exported="true" android:process=":voice"/>
         <service android:name=".AstraRecognitionService" android:label="Astra Speech Recognition" android:exported="true"><intent-filter><action android:name="android.speech.RecognitionService"/><category android:name="android.intent.category.DEFAULT"/></intent-filter><meta-data android:name="android.speech" android:resource="@xml/recognition_service"/></service>
+        <receiver android:name=".AstraAutomationReceiver" android:exported="false"/>
     </application>
 </manifest>
