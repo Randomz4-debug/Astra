@@ -1,0 +1,233 @@
+from pathlib import Path
+
+p = Path('app/src/main/java/com/astra/ai')
+
+voice = r'''package com.astra.ai
+
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
+import android.speech.tts.Voice
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.util.Locale
+
+/** Central voice controller with on-device recognition fallback and PCM-reactive TTS telemetry. */
+class MultilingualVoiceController(private val context: Context) : TextToSpeech.OnInitListener {
+    private var tts: TextToSpeech? = TextToSpeech(context, this)
+    private var ttsReady = false
+    private var pendingSpeech: Pair<String, String>? = null
+    private var recognizer: SpeechRecognizer? = null
+    private var usingOnDeviceRecognizer = false
+    private var languageTag = "auto"
+    private var continuous = false
+    private var continuousCallback: ((String) -> Unit)? = null
+    private val handler = Handler(Looper.getMainLooper())
+
+    init { createBestRecognizer() }
+
+    private fun createBestRecognizer() {
+        if (!SpeechRecognizer.isRecognitionAvailable(context)) return
+        recognizer = runCatching {
+            if (android.os.Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(context)) {
+                usingOnDeviceRecognizer = true
+                SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
+            } else {
+                usingOnDeviceRecognizer = false
+                SpeechRecognizer.createSpeechRecognizer(context)
+            }
+        }.getOrElse {
+            usingOnDeviceRecognizer = false
+            runCatching { SpeechRecognizer.createSpeechRecognizer(context) }.getOrNull()
+        }
+    }
+
+    override fun onInit(status: Int) {
+        if (status != TextToSpeech.SUCCESS) { ttsReady = false; return }
+        ttsReady = true
+        tts?.language = Locale.getDefault()
+        tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String) { VoiceTelemetry.setSpeaking(true) }
+            override fun onAudioAvailable(utteranceId: String, audio: ByteArray) {
+                if (audio.isEmpty()) return
+                val buffer = ByteBuffer.wrap(audio).order(ByteOrder.LITTLE_ENDIAN)
+                var sum = 0.0
+                var count = 0
+                while (buffer.remaining() >= 2) {
+                    val sample = buffer.short.toInt()
+                    sum += sample.toDouble() * sample.toDouble()
+                    count++
+                }
+                if (count > 0) {
+                    val rms = kotlin.math.sqrt(sum / count) / 32768.0
+                    VoiceTelemetry.setRms((rms * 100f).coerceIn(0f, 100f))
+                }
+            }
+            override fun onRangeStart(utteranceId: String, start: Int, end: Int, frame: Int) {}
+            override fun onDone(utteranceId: String) { VoiceTelemetry.setSpeaking(false) }
+            override fun onError(utteranceId: String) { VoiceTelemetry.setSpeaking(false) }
+            override fun onError(utteranceId: String, errorCode: Int) { VoiceTelemetry.setSpeaking(false) }
+        })
+        pendingSpeech?.let { (text, language) -> pendingSpeech = null; speakNow(text, language) }
+    }
+
+    fun listen(language: String, onResult: (String) -> Unit, onState: (Boolean) -> Unit) {
+        continuous = false; continuousCallback = null; startRecognition(language, onResult, onState)
+    }
+
+    fun startAlwaysListening(language: String = "auto", onResult: (String) -> Unit) {
+        continuous = true; continuousCallback = onResult; startRecognition(language, onResult) { VoiceTelemetry.setListening(it) }
+    }
+
+    private fun startRecognition(language: String, onResult: (String) -> Unit, onState: (Boolean) -> Unit) {
+        val sr = recognizer ?: run { onState(false); return }
+        languageTag = language.trim().ifBlank { "auto" }
+        sr.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(p: Bundle?) { onState(true); VoiceTelemetry.setListening(true) }
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(v: Float) { VoiceTelemetry.setRms(((v + 2f) / 14f * 100f).coerceIn(0f, 100f)) }
+            override fun onBufferReceived(b: ByteArray?) {}
+            override fun onEndOfSpeech() { onState(false); VoiceTelemetry.setListening(false) }
+            override fun onError(e: Int) { onState(false); VoiceTelemetry.setListening(false); if (continuous) restart() }
+            override fun onResults(b: Bundle?) {
+                onState(false); VoiceTelemetry.setListening(false)
+                b?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let(onResult)
+                if (continuous) restart()
+            }
+            override fun onPartialResults(b: Bundle?) {}
+            override fun onEvent(t: Int, p: Bundle?) {}
+        })
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, if (languageTag == "auto") Locale.getDefault().toLanguageTag() else languageTag)
+            if (android.os.Build.VERSION.SDK_INT >= 34) {
+                putExtra(RecognizerIntent.EXTRA_ENABLE_LANGUAGE_DETECTION, true)
+                putExtra(RecognizerIntent.EXTRA_ENABLE_LANGUAGE_SWITCH, true)
+            }
+        }
+        runCatching { sr.startListening(intent) }.onFailure {
+            if (usingOnDeviceRecognizer) {
+                runCatching { sr.destroy() }
+                usingOnDeviceRecognizer = false
+                recognizer = runCatching { SpeechRecognizer.createSpeechRecognizer(context) }.getOrNull()
+                if (recognizer != null) startRecognition(language, onResult, onState) else onState(false)
+            } else { onState(false); if (continuous) restart() }
+        }
+    }
+
+    private fun restart() { if (continuous) handler.postDelayed({ if (continuous) startRecognition(languageTag, continuousCallback ?: {}, { VoiceTelemetry.setListening(it) }) }, 350) }
+
+    fun stop() {
+        continuous = false; continuousCallback = null; handler.removeCallbacksAndMessages(null)
+        runCatching { recognizer?.cancel() }; runCatching { tts?.stop() }
+        VoiceTelemetry.setListening(false); VoiceTelemetry.setSpeaking(false)
+    }
+
+    fun speak(text: String, language: String = "auto") {
+        val clean = text.trim(); if (clean.isBlank()) return
+        if (!ttsReady) { pendingSpeech = clean to language; return }
+        speakNow(clean, language)
+    }
+
+    private fun speakNow(text: String, language: String) {
+        val engine = tts ?: return
+        val tag = language.trim()
+        if (tag.isNotBlank() && tag != "auto") {
+            val result = engine.setLanguage(Locale.forLanguageTag(tag))
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) engine.language = Locale.getDefault()
+        } else engine.language = Locale.getDefault()
+        val id = "astra-${System.nanoTime()}"
+        runCatching { engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, id) }.onFailure { VoiceTelemetry.setSpeaking(false) }
+    }
+
+    fun setVoice(voiceName: String): Boolean = runCatching {
+        val selected = tts?.voices?.firstOrNull { it.name == voiceName } ?: return false
+        tts?.voice = selected; true
+    }.getOrDefault(false)
+
+    fun availableVoices(): List<Voice> = tts?.voices?.toList().orEmpty()
+
+    fun release() {
+        stop(); recognizer?.destroy(); recognizer = null; tts?.shutdown(); tts = null; ttsReady = false; pendingSpeech = null
+    }
+}
+'''
+(p/'MultilingualVoiceController.kt').write_text(voice, encoding='utf-8')
+
+telemetry = r'''package com.astra.ai
+
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+object VoiceTelemetry {
+    private val _rms = MutableStateFlow(0f)
+    val rms = _rms.asStateFlow()
+    private val _speaking = MutableStateFlow(false)
+    val speaking = _speaking.asStateFlow()
+    private val _listening = MutableStateFlow(false)
+    val listening = _listening.asStateFlow()
+    fun setRms(value: Float) { _rms.value = value.coerceIn(0f, 100f) }
+    fun setSpeaking(value: Boolean) { _speaking.value = value; if (!value) _rms.value = 0f }
+    fun setListening(value: Boolean) { _listening.value = value }
+}
+'''
+(p/'VoiceTelemetry.kt').write_text(telemetry, encoding='utf-8')
+
+main = p/'AstraMainActivity.kt'
+s = main.read_text(encoding='utf-8')
+s = s.replace('    val live by VoiceTelemetry.listening.collectAsState()\n    val rms by VoiceTelemetry.rms.collectAsState()', '    val live by VoiceTelemetry.listening.collectAsState()\n    val speaking by VoiceTelemetry.speaking.collectAsState()\n    val rms by VoiceTelemetry.rms.collectAsState()')
+start = s.index('@Composable\nprivate fun AstraWave()')
+end = s.index('\n@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)', start)
+wave = r'''@Composable
+private fun AstraWave() {
+    val speaking by VoiceTelemetry.speaking.collectAsState()
+    val listening by VoiceTelemetry.listening.collectAsState()
+    val energy by VoiceTelemetry.rms.collectAsState()
+    val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "astra_audio_wave")
+    val phase by transition.animateFloat(0f, (2 * PI).toFloat(), androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(850, easing = androidx.compose.animation.core.LinearEasing)), label = "phase")
+    val strength = if (speaking || listening) (energy / 100f).coerceIn(0.08f, 1f) else 0.05f
+    Canvas(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(28.dp)).background(Brush.radialGradient(listOf(Color(0xFF320813), Color(0xFF06070B))))) {
+        val center = size.height / 2f
+        val gradient = Brush.horizontalGradient(listOf(Color.Transparent, Color(0xFF4C8CFF), Color(0xFFFF365F), Color(0xFFFFD5DE), Color(0xFFFF365F), Color(0xFF4C8CFF), Color.Transparent))
+        repeat(7) { layer ->
+            val path = Path(); var x = 0f; var first = true
+            while (x <= size.width) {
+                val distance = kotlin.math.abs(x - size.width / 2f) / (size.width / 2f)
+                val envelope = (1f - distance).coerceAtLeast(0f)
+                val ripple = sin(x * (0.014f + layer * 0.0018f) + phase * (1f + layer * .07f))
+                val micro = sin(x * (0.041f + layer * .003f) - phase * 1.7f)
+                val y = center + (ripple * .65f + micro * .35f) * size.height * (.08f + layer * .012f) * (0.2f + envelope) * (0.35f + strength * 1.35f)
+                if (first) { path.moveTo(x, y); first = false } else path.lineTo(x, y)
+                x += 3f
+            }
+            drawPath(path, gradient, style = Stroke(if (layer == 3) 4.5f else 1.5f, cap = StrokeCap.Round))
+        }
+        drawCircle(Color(0xFFFF3158).copy(alpha = .10f + .25f * strength), Offset(size.width / 2f, center), 22f + 32f * strength)
+        drawCircle(Color(0xFFFF3158).copy(alpha = .75f), Offset(size.width / 2f, center), 3f + 4f * strength)
+    }
+}
+'''
+s = s[:start] + wave + s[end:]
+main.write_text(s, encoding='utf-8')
+
+tooling = p/'AstraTooling.kt'
+t = tooling.read_text(encoding='utf-8')
+t = t.replace('"callApi" -> {', '"callApi" -> withContext(Dispatchers.IO) {')
+tooling.write_text(t, encoding='utf-8')
+
+required = [p/'MultilingualVoiceController.kt', p/'VoiceTelemetry.kt', p/'AstraMainActivity.kt', p/'AstraCustomCommandEngine.kt', p/'AstraCustomCommandsActivity.kt']
+assert all(x.exists() and x.stat().st_size > 100 for x in required)
+assert 'UtteranceProgressListener' in (p/'MultilingualVoiceController.kt').read_text()
+assert 'onAudioAvailable' in (p/'MultilingualVoiceController.kt').read_text()
+assert 'editingTrigger' in (p/'AstraCustomCommandsActivity.kt').read_text()
+assert 'AstraCustomCommandEngine' in (p/'AstraAgentRuntime.kt').read_text()
+print('Astra audio-sync source hardening checks passed.')
