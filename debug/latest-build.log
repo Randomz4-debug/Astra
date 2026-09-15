@@ -10,38 +10,46 @@ Daemon will be stopped at the end of the build
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
 > Task :app:createDebugCompatibleScreenManifests
-> Task :app:mergeDebugResources
 > Task :app:extractDeepLinksDebug
+> Task :app:mergeDebugResources
 > Task :app:parseDebugLocalResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
 > Task :app:javaPreCompileDebug
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
 > Task :app:desugarDebugFileDependencies
-> Task :app:compressDebugAssets
-> Task :app:processDebugManifestForPackage
-> Task :app:checkDebugDuplicateClasses
 > Task :app:mergeDebugJniLibFolders
-> Task :app:mergeLibDexDebug
-> Task :app:mergeDebugNativeLibs
+> Task :app:compressDebugAssets
+> Task :app:checkDebugDuplicateClasses
 > Task :app:processDebugResources
-> Task :app:validateSigningDebug
-> Task :app:writeDebugAppMetadata
-> Task :app:writeDebugSigningConfigVersions
+> Task :app:mergeDebugNativeLibs
+> Task :app:mergeLibDexDebug
 
 > Task :app:stripDebugDebugSymbols
 Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libimage_processing_util_jni.so, liblanguage_id_l2c_jni.so, libmlkit_google_ocr_pipeline.so, libsurface_util_jni.so, libtranslate_jni.so.
 
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
 > Task :app:mergeExtDexDebug
 
-> Task :app:compileDebugKotlin
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraMainActivity.kt:239:159 No value passed for parameter 'content'.
-
 > Task :app:compileDebugKotlin FAILED
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789473417218.json
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAutomationEngine.kt:143:220 Type checking has run into a recursive problem. Easiest workaround: specify the types of your declarations explicitly.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAutomationEngine.kt:143:309 Type checking has run into a recursive problem. Easiest workaround: specify the types of your declarations explicitly.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAutomationEngine.kt:149:94 Unresolved reference 'AstraAutomationReceiver'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAutomationEngine.kt:149:125 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAutomationEngine.kt:149:125 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+val <T> KClass<T>.java: Class<T>
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAutomationEngine.kt:149:131 Unresolved reference 'putExtra'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAutomationEngine.kt:153:174 Unresolved reference 'AstraAutomationReceiver'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAutomationEngine.kt:153:205 Cannot infer type for this parameter. Specify it explicitly.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraAutomationEngine.kt:153:205 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+val <T> KClass<T>.java: Class<T>
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789475048622.json
 
 FAILURE: Build failed with an exception.
 
@@ -245,5 +253,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 36s
+BUILD FAILED in 37s
 28 actionable tasks: 28 executed
