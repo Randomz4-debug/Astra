@@ -26,7 +26,7 @@ class SecureSettings(context: Context) {
     }
 
     fun setOpenAiApiKey(value: String) {
-        if (value.isBlank()) { prefs.edit().remove("openai_key").apply(); return }
+        if (value.isBlank()) { prefs.edit().remove("openai_key").remove("openai_iv").apply(); return }
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, key())
         val encrypted = Base64.encodeToString(cipher.doFinal(value.toByteArray(StandardCharsets.UTF_8)), Base64.NO_WRAP)
@@ -34,9 +34,14 @@ class SecureSettings(context: Context) {
         prefs.edit().putString("openai_key", encrypted).putString("openai_iv", iv).apply()
     }
 
+    /** Fast UI-safe presence check. It never opens Android Keystore or decrypts the secret. */
+    fun hasOpenAiApiKey(): Boolean = !prefs.getString("openai_key", null).isNullOrBlank()
+
+    /** Decryption is deliberately kept for actual API work, which callers should perform off the main thread. */
     fun openAiApiKey(): String? = runCatching {
         val encrypted = prefs.getString("openai_key", null) ?: return null
-        val iv = Base64.decode(prefs.getString("openai_iv", null), Base64.NO_WRAP)
+        val ivText = prefs.getString("openai_iv", null) ?: return null
+        val iv = Base64.decode(ivText, Base64.NO_WRAP)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, iv))
         String(cipher.doFinal(Base64.decode(encrypted, Base64.NO_WRAP)), StandardCharsets.UTF_8)
