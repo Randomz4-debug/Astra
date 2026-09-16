@@ -6,7 +6,6 @@ from pathlib import Path
 root = Path("app/src/main/java/com/astra/ai")
 required = [
     root / "AstraRealtimeCore.kt",
-    root / "AstraRealtimeVisionAnalyzer.kt",
     root / "AstraAccessibilityService.kt",
     root / "AstraTooling.kt",
 ]
