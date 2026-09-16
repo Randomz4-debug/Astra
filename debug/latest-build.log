@@ -11,8 +11,8 @@ Daemon will be stopped at the end of the build
 > Task :app:packageDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
-> Task :app:mergeDebugResources
 > Task :app:parseDebugLocalResources
+> Task :app:mergeDebugResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
 > Task :app:javaPreCompileDebug
@@ -21,10 +21,10 @@ Daemon will be stopped at the end of the build
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
 > Task :app:desugarDebugFileDependencies
+> Task :app:mergeDebugJniLibFolders
 > Task :app:compressDebugAssets
 > Task :app:processDebugManifestForPackage
 > Task :app:checkDebugDuplicateClasses
-> Task :app:mergeDebugJniLibFolders
 > Task :app:mergeLibDexDebug
 > Task :app:mergeDebugNativeLibs
 > Task :app:processDebugResources
@@ -37,23 +37,29 @@ Unable to strip the following libraries, packaging them as they are: libandroidx
 
 > Task :app:mergeExtDexDebug
 
+> Task :app:compileDebugKotlin
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:116:13 Conflicting overloads:
+fun parseTimerSeconds(text: String): Int?
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:132:13 Conflicting overloads:
+fun parseTimerSeconds(input: String): Int?
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:144:97 Unresolved reference 't'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:145:38 Unresolved reference 'lower'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:145:63 Unresolved reference 'lower'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:145:90 Unresolved reference 'lower'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:145:116 Unresolved reference 'lower'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:145:144 Unresolved reference 'lower'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:145:171 Unresolved reference 'lower'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:151:58 Unsupported escape sequence.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:151:65 Unsupported escape sequence.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:151:75 Unsupported escape sequence.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:151:84 Unsupported escape sequence.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:151:90 Unsupported escape sequence.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:151:96 Unsupported escape sequence.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:151:98 Unsupported escape sequence.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:151:104 Unsupported escape sequence.
+
 > Task :app:compileDebugKotlin FAILED
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:132:97 Unresolved reference 't'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:133:38 Unresolved reference 'lower'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:133:63 Unresolved reference 'lower'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:133:90 Unresolved reference 'lower'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:133:116 Unresolved reference 'lower'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:133:144 Unresolved reference 'lower'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:133:171 Unresolved reference 'lower'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:139:58 Unsupported escape sequence.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:139:65 Unsupported escape sequence.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:139:75 Unsupported escape sequence.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:139:84 Unsupported escape sequence.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:139:90 Unsupported escape sequence.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:139:96 Unsupported escape sequence.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:139:98 Unsupported escape sequence.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:139:104 Unsupported escape sequence.
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789529336486.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789529982777.json
 
 FAILURE: Build failed with an exception.
 
@@ -257,5 +263,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 33s
+BUILD FAILED in 46s
 28 actionable tasks: 28 executed
