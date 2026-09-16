@@ -48,13 +48,17 @@ if handle_start < 0:
     raise SystemExit("LocalCommandEngine.handle() not found")
 
 prefix = s[handle_start:start]
+# Remove every previously generated timer parser in this handle block, including
+# older variants that referenced out-of-scope t/lower variables.
 prefix = re.sub(r'\n\s*// ASTRA_TIMER_HARDENED:.*?(?=\n\s*if \(lower == "custom commands")', '\n', prefix, flags=re.S)
 prefix = re.sub(r'\n\s*val timerSeconds = run \{.*?(?=\n\s*if \(lower == "custom commands")', '\n', prefix, flags=re.S)
 prefix = re.sub(r'\n\s*val timerSeconds = parseTimerSeconds\(t\).*?(?=\n\s*if \(lower == "custom commands")', '\n', prefix, flags=re.S)
+# Remove any remaining generated timer assignment/return fragments from older runs.
+prefix = re.sub(r'\n\s*if \(timerSeconds != null\) \{\s*\n\s*return router\.execute\("setTimer".*?\n\s*\}', '\n', prefix, flags=re.S)
 
 simple_timer = '''
-        // ASTRA_TIMER_HARDENED: deterministic timer parser without Kotlin regex escapes.
-        val timerSeconds = run {
+        // ASTRA_TIMER_HARDENED: deterministic timer parser.
+        val astraTimerSeconds = run {
             if (!lower.contains("timer") && !lower.contains("countdown")) {
                 null
             } else {
@@ -76,8 +80,8 @@ simple_timer = '''
                 }
             }
         }
-        if (timerSeconds != null) {
-            return router.execute("setTimer", mapOf("seconds" to timerSeconds.toString(), "skipUi" to "false"))
+        if (astraTimerSeconds != null) {
+            return router.execute("setTimer", mapOf("seconds" to astraTimerSeconds.toString(), "skipUi" to "false"))
         }
 '''
 
