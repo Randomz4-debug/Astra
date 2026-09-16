@@ -40,6 +40,7 @@ class AstraAccessibilityService : AccessibilityService() {
     }
 
     fun readScreen(): String = _screenText.value
+    fun rootNode(): AccessibilityNodeInfo? = rootInActiveWindow
 
     suspend fun readScreenWithOcr(): String {
         val text = readScreen().trim()
