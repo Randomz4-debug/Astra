@@ -16,14 +16,14 @@ Daemon will be stopped at the end of the build
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
 > Task :app:javaPreCompileDebug
+> Task :app:processDebugManifestForPackage
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
-> Task :app:processDebugManifestForPackage
 > Task :app:desugarDebugFileDependencies
-> Task :app:mergeDebugJniLibFolders
 > Task :app:compressDebugAssets
+> Task :app:mergeDebugJniLibFolders
 > Task :app:checkDebugDuplicateClasses
 > Task :app:processDebugResources
 > Task :app:mergeDebugNativeLibs
@@ -38,6 +38,10 @@ Unable to strip the following libraries, packaging them as they are: libandroidx
 > Task :app:mergeExtDexDebug
 
 > Task :app:compileDebugKotlin FAILED
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:130:64 Conflicting declarations:
+local val timerSeconds: Int?
+local val timerSeconds: Int?
+local val timerSeconds: Int?
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:130:97 Unresolved reference 't'.
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:131:38 Unresolved reference 'lower'.
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:131:63 Unresolved reference 'lower'.
@@ -45,7 +49,15 @@ e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTool
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:131:116 Unresolved reference 'lower'.
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:131:144 Unresolved reference 'lower'.
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:131:171 Unresolved reference 'lower'.
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789531096509.json
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:136:13 Conflicting declarations:
+local val timerSeconds: Int?
+local val timerSeconds: Int?
+local val timerSeconds: Int?
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:140:13 Conflicting declarations:
+local val timerSeconds: Int?
+local val timerSeconds: Int?
+local val timerSeconds: Int?
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789531204754.json
 
 FAILURE: Build failed with an exception.
 
@@ -249,5 +261,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 51s
+BUILD FAILED in 48s
 28 actionable tasks: 28 executed
