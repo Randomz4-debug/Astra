@@ -53,6 +53,7 @@ jobs:
           python tools/upgrade_screen_agent_translation.py
           python tools/fix_screen_agent_compile.py
           python tools/final_realtime_upgrade.py
+          python tools/fix_realtime_core_compile.py
           python tools/final_realtime_hardening.py
           python tools/fix_realtime_compile.py
       - name: Verify critical Astra features
@@ -82,6 +83,7 @@ jobs:
           test -f tools/upgrade_screen_agent_translation.py
           test -f tools/fix_screen_agent_compile.py
           test -f tools/final_realtime_upgrade.py
+          test -f tools/fix_realtime_core_compile.py
           test -f tools/final_realtime_hardening.py
           test -f tools/fix_realtime_compile.py
           grep -q 'AstraConnectedAppsActivity' app/src/main/AndroidManifest.xml
