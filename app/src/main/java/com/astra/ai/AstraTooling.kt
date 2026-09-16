@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import android.provider.AlarmClock
 import android.telephony.PhoneNumberUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -26,6 +27,19 @@ class DeviceTools(private val context: Context) {
     fun settings(): ToolResult = runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); ToolResult(true, "Opening Settings.") }.getOrElse { ToolResult(false, "Android could not open Settings: ${it.message}") }
     fun camera(front: Boolean = false, autoCapture: Boolean = false): ToolResult = runCatching { context.startActivity(Intent(context, AstraCameraActivity::class.java).putExtra("front", front).putExtra("autoCapture", autoCapture).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); ToolResult(true, if (autoCapture) "Opening the ${if (front) "front" else "back"} camera and taking the photo." else "Opening the ${if (front) "front" else "back"} camera.") }.getOrElse { ToolResult(false, "Astra Camera could not open: ${it.message}") }
     fun browser(url: String): ToolResult { val raw = url.trim(); if (raw.isBlank()) return ToolResult(false, "I need a URL to open."); val value = if (raw.startsWith("http://", true) || raw.startsWith("https://", true)) raw else "https://$raw"; return runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(value)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); ToolResult(true, "Opening the web page.") }.getOrElse { ToolResult(false, "Android could not open that link.") } }
+    fun timer(seconds: Int, skipUi: Boolean = false): ToolResult {
+        if (seconds <= 0) return ToolResult(false, "Timer duration must be greater than zero.")
+        return runCatching {
+            val intent = Intent(AlarmClock.ACTION_SET_TIMER)
+                .putExtra(AlarmClock.EXTRA_LENGTH, seconds)
+                .putExtra(AlarmClock.EXTRA_SKIP_UI, skipUi)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            ToolResult(true, "Android timer started for ${seconds}s.")
+        }.getOrElse { error ->
+            ToolResult(false, "Android could not start the timer: ${error.message ?: "unknown error"}")
+        }
+    }
     fun maps(query: String): ToolResult = runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(query))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); ToolResult(true, "Opening Maps for $query.") }.getOrElse { ToolResult(false, "No maps application is available.") }
     fun call(number: String): ToolResult { val cleaned = PhoneNumberUtils.normalizeNumber(number); if (cleaned.isBlank()) return ToolResult(false, "I need a phone number to place the call."); return CallManager(context).placeCall(cleaned, confirmed = true) }
     fun filePicker(): ToolResult = runCatching { context.startActivity(Intent(context, AstraFilePickerActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); ToolResult(true, "Opening the file picker. I’ll process the selected file and show it in Astra Chat.") }.getOrElse { ToolResult(false, "The file picker could not open: ${it.message}") }
@@ -63,7 +77,7 @@ class ToolRouter(private val context: Context) {
     val tools = listOf(
         ToolSpec("openApp", "Open an installed application."), ToolSpec("goHome", "Return to the launcher."), ToolSpec("openSettings", "Open Android Settings."),
         ToolSpec("openCamera", "Open Astra Camera."), ToolSpec("capturePhoto", "Open Astra Camera and capture a photo."), ToolSpec("openBrowser", "Open a web page."),
-        ToolSpec("openMaps", "Open a location/search in Maps."), ToolSpec("call", "Place a phone call to a supplied number."), ToolSpec("pickFile", "Open the Android file picker."),
+        ToolSpec("openMaps", "Open a location/search in Maps."), ToolSpec("setTimer", "Start an Android system timer for a duration in seconds."), ToolSpec("call", "Place a phone call to a supplied number."), ToolSpec("pickFile", "Open the Android file picker."),
         ToolSpec("readScreen", "Read the current app screen using accessibility text."), ToolSpec("readScreenOcr", "Read visible screen text using local OCR."),
         ToolSpec("clickScreen", "Click a visible screen control by text."), ToolSpec("typeScreen", "Type into the focused/editable screen field."), ToolSpec("scrollScreen", "Scroll the current screen."),
         ToolSpec("tapScreen", "Tap screen coordinates."), ToolSpec("swipeScreen", "Swipe screen coordinates."), ToolSpec("systemScreenAction", "Back, Home, Recents, Notifications, Quick Settings or screenshot."),
@@ -75,7 +89,7 @@ class ToolRouter(private val context: Context) {
         when (name) {
             "openApp" -> apps.open(args["name"].orEmpty()); "goHome" -> device.home(); "openSettings" -> device.settings()
             "openCamera" -> device.camera(front = args["front"] == "true"); "capturePhoto" -> device.camera(front = args["front"] == "true", autoCapture = true)
-            "openBrowser" -> device.browser(args["url"].orEmpty()); "openMaps" -> device.maps(args["query"].orEmpty()); "call" -> device.call(args["number"].orEmpty()); "pickFile" -> device.filePicker()
+            "openBrowser" -> device.browser(args["url"].orEmpty()); "openMaps" -> device.maps(args["query"].orEmpty()); "setTimer" -> device.timer(args["seconds"]?.toIntOrNull() ?: 0, args["skipUi"] == "true"); "call" -> device.call(args["number"].orEmpty()); "pickFile" -> device.filePicker()
             "readScreen" -> screen.read(); "readScreenOcr" -> screen.readWithOcr(); "clickScreen" -> screen.click(args["text"].orEmpty()); "typeScreen" -> screen.type(args["text"].orEmpty())
             "scrollScreen" -> screen.scroll(args["direction"].orEmpty().ifBlank { "down" }); "tapScreen" -> screen.tap(args["x"]?.toFloatOrNull() ?: 0f, args["y"]?.toFloatOrNull() ?: 0f)
             "swipeScreen" -> screen.swipe(args["x1"]?.toFloatOrNull() ?: 0f, args["y1"]?.toFloatOrNull() ?: 0f, args["x2"]?.toFloatOrNull() ?: 0f, args["y2"]?.toFloatOrNull() ?: 0f)
@@ -97,8 +111,23 @@ class LocalCommandEngine(private val context: Context) {
     private val api = AstraApiHub(context)
     private fun normalized(text: String): String = text.trim().lowercase().replace(Regex("\\s+"), " ").removePrefix("please ").removePrefix("could you ").removePrefix("can you ").removePrefix("would you ").removePrefix("hey astra ").removePrefix("astra ").trim()
 
+    private fun parseTimerSeconds(text: String): Int? {
+        val value = text.trim().lowercase()
+        if (!value.contains("timer") && !value.contains("countdown")) return null
+        val numberText = value.dropWhile { !it.isDigit() }.takeWhile { it.isDigit() || it == '.' }
+        val number = numberText.toDoubleOrNull() ?: return null
+        val seconds = when {
+            value.contains("hour") || value.contains(" hr") || value.endsWith("h") -> (number * 3600.0).toInt()
+            value.contains("minute") || value.contains(" min") || value.endsWith("m") -> (number * 60.0).toInt()
+            else -> number.toInt()
+        }
+        return seconds.takeIf { it > 0 }
+    }
+
     suspend fun handle(text: String): ToolResult? {
         val t = text.trim(); val lower = normalized(t)
+        val timerSeconds = parseTimerSeconds(t)
+        if (timerSeconds != null) return router.execute("setTimer", mapOf("seconds" to timerSeconds.toString(), "skipUi" to "false"))
         if (lower == "list apis" || lower == "show apis" || lower == "what apis do you have") return router.execute("listApis", emptyMap())
         val apiHit = api.all().firstOrNull { lower.contains(it.name.lowercase()) && it.enabled }
         if (apiHit != null && (lower.contains("api") || lower.contains("request") || lower.contains("fetch") || lower.contains("get ") || lower.contains("post ") || lower.contains("send "))) {
