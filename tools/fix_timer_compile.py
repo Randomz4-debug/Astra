@@ -3,15 +3,17 @@ from pathlib import Path
 P = Path("app/src/main/java/com/astra/ai/AstraTooling.kt")
 s = P.read_text(encoding="utf-8")
 
-# This script is intentionally idempotent. The Kotlin source is the source of
-# truth; never inject timer code into arbitrary regions of handle().
+# Add the Android timer import exactly once.
 if "import android.provider.AlarmClock" not in s:
-    s = s.replace("import android.provider.Settings\n", "import android.provider.Settings\nimport android.provider.AlarmClock\n", 1)
+    marker = "import android.provider.Settings\n"
+    if marker not in s:
+        raise SystemExit("Settings import marker not found")
+    s = s.replace(marker, marker + "import android.provider.AlarmClock\n", 1)
 
-maps_marker = "    fun maps(query: String): ToolResult ="
+# Add the timer implementation inside DeviceTools, immediately before maps().
 if "fun timer(seconds: Int, skipUi: Boolean = false)" not in s:
-    i = s.find(maps_marker)
-    if i < 0:
+    marker = "    fun maps(query: String): ToolResult ="
+    if marker not in s:
         raise SystemExit("DeviceTools maps() marker not found")
     method = '''    fun timer(seconds: Int, skipUi: Boolean = false): ToolResult {
         if (seconds <= 0) return ToolResult(false, "Timer duration must be greater than zero.")
@@ -27,43 +29,88 @@ if "fun timer(seconds: Int, skipUi: Boolean = false)" not in s:
         }
     }
 '''
-    s = s[:i] + method + s[i:]
+    s = s.replace(marker, method + marker, 1)
 
-spec_marker = 'ToolSpec("openMaps", "Open a location/search in Maps."),'
+# Register the tool exactly once.
+spec = 'ToolSpec("openMaps", "Open a location/search in Maps."),'
 if 'ToolSpec("setTimer",' not in s:
-    if spec_marker not in s:
+    if spec not in s:
         raise SystemExit("ToolSpec insertion marker not found")
-    s = s.replace(spec_marker, spec_marker + '\n        ToolSpec("setTimer", "Start an Android system timer for a duration in seconds."),', 1)
+    s = s.replace(spec, spec + '\n        ToolSpec("setTimer", "Start an Android system timer for a duration in seconds."),', 1)
 
-router_marker = '"openBrowser" -> device.browser(args["url"].orEmpty()); "openMaps" -> device.maps(args["query"].orEmpty()); "call" -> device.call(args["number"].orEmpty()); "pickFile" -> device.filePicker()'
+# Route the tool exactly once.
+route = '"openBrowser" -> device.browser(args["url"].orEmpty()); "openMaps" -> device.maps(args["query"].orEmpty()); "call" -> device.call(args["number"].orEmpty()); "pickFile" -> device.filePicker()'
 if '"setTimer" -> device.timer' not in s:
-    if router_marker not in s:
+    if route not in s:
         raise SystemExit("ToolRouter execution marker not found")
     replacement = '"openBrowser" -> device.browser(args["url"].orEmpty()); "openMaps" -> device.maps(args["query"].orEmpty()); "setTimer" -> device.timer(args["seconds"]?.toIntOrNull() ?: 0, args["skipUi"] == "true"); "call" -> device.call(args["number"].orEmpty()); "pickFile" -> device.filePicker()'
-    s = s.replace(router_marker, replacement, 1)
+    s = s.replace(route, replacement, 1)
 
 handle_marker = '    suspend fun handle(text: String): ToolResult? {'
 if handle_marker not in s:
     raise SystemExit("LocalCommandEngine.handle() not found")
 
-# Remove only the known generated inline timer blocks from older versions.
-# Do not use a broad look-ahead regex that can consume unrelated commands.
-start = s.find(handle_marker)
-end = s.find('\n    }\n}', start)
-if end < 0:
-    raise SystemExit("LocalCommandEngine.handle() end not found")
-handle = s[start:end]
+# Locate the handle function using brace counting. This avoids regex look-ahead
+# accidentally consuming unrelated commands or closing the class incorrectly.
+handle_start = s.index(handle_marker)
+brace_start = s.index("{", handle_start)
+depth = 0
+handle_end = None
+for i in range(brace_start, len(s)):
+    ch = s[i]
+    if ch == "{":
+        depth += 1
+    elif ch == "}":
+        depth -= 1
+        if depth == 0:
+            handle_end = i + 1
+            break
+if handle_end is None:
+    raise SystemExit("Could not find end of LocalCommandEngine.handle()")
 
-import re
-handle = re.sub(r'\n\s*// ASTRA_TIMER_HARDENED:.*?(?=\n\s*if \(lower == "list apis"|\n\s*if \(lower == "custom commands")', '', handle, flags=re.S)
-handle = re.sub(r'\n\s*val (?:astra)?TimerSeconds\s*=.*?(?=\n\s*if \(lower == "list apis"|\n\s*if \(lower == "custom commands")', '', handle, flags=re.S)
-handle = re.sub(r'\n\s*if \((?:astra)?TimerSeconds != null\)\s*\{.*?\n\s*\}', '', handle, flags=re.S)
+handle = s[handle_start:handle_end]
 
-# Ensure exactly one parser exists as a class method, outside handle().
-parser_name = '    private fun parseTimerSeconds(text: String): Int? {'
-if parser_name not in s:
-    insert_at = s.find(handle_marker)
-    parser = '''    private fun parseTimerSeconds(text: String): Int? {
+# Remove any timer call previously injected into handle. Only lines between the
+# exact timer marker and the next normal command are removed.
+lines = handle.splitlines()
+clean = []
+skip = False
+for line in lines:
+    stripped = line.strip()
+    if stripped.startswith("// ASTRA_TIMER_HARDENED"):
+        skip = True
+        continue
+    if skip:
+        if stripped.startswith('if (lower == "list apis"'):
+            skip = False
+            clean.append(line)
+        continue
+    if "val timerSeconds = parseTimerSeconds(t)" in line:
+        continue
+    clean.append(line)
+handle = "\n".join(clean)
+
+# Keep one parser as a class-level method. Remove duplicate generated copies if
+# they exist, then insert one immediately before handle().
+parser_signature = "    private fun parseTimerSeconds(text: String): Int? {"
+while s.count(parser_signature) > 0:
+    first = s.index(parser_signature)
+    brace = s.index("{", first)
+    depth = 0
+    parser_end = None
+    for i in range(brace, len(s)):
+        if s[i] == "{":
+            depth += 1
+        elif s[i] == "}":
+            depth -= 1
+            if depth == 0:
+                parser_end = i + 1
+                break
+    if parser_end is None:
+        raise SystemExit("Could not find end of parseTimerSeconds()")
+    s = s[:first] + s[parser_end:].lstrip("\n")
+
+parser = '''    private fun parseTimerSeconds(text: String): Int? {
         val value = text.trim().lowercase()
         if (!value.contains("timer") && !value.contains("countdown")) return null
         val numberText = value.dropWhile { !it.isDigit() }
@@ -78,19 +125,29 @@ if parser_name not in s:
     }
 
 '''
-    s = s[:insert_at] + parser + s[insert_at:]
+# Recompute handle location after parser cleanup.
+handle_start = s.index(handle_marker)
+s = s[:handle_start] + parser + s[handle_start:]
 
-# Re-read the handle after parser insertion and insert one safe call after the
-# local t/lower declarations. This is the only timer call injected by this file.
-start = s.find(handle_marker)
-end = s.find('\n    }\n}', start)
-handle = s[start:end]
-needle = '        val t = text.trim(); val lower = normalized(t)'
+# Rebuild the handle slice after insertion and add one timer call immediately
+# after the local t/lower declarations. t and lower therefore remain in scope.
+handle_start = s.index(handle_marker)
+brace_start = s.index("{", handle_start)
+depth = 0
+handle_end = None
+for i in range(brace_start, len(s)):
+    if s[i] == "{":
+        depth += 1
+    elif s[i] == "}":
+        depth -= 1
+        if depth == 0:
+            handle_end = i + 1
+            break
+handle = s[handle_start:handle_end]
+needle = "        val t = text.trim(); val lower = normalized(t)"
 if needle not in handle:
-    raise SystemExit("t/lower declaration not found")
-
-if 'val timerSeconds = parseTimerSeconds(t)' not in handle:
-    addition = '''
+    raise SystemExit("t/lower declaration not found inside handle()")
+addition = '''
         val timerSeconds = parseTimerSeconds(t)
         if (timerSeconds != null) {
             return router.execute(
@@ -98,11 +155,10 @@ if 'val timerSeconds = parseTimerSeconds(t)' not in handle:
                 mapOf("seconds" to timerSeconds.toString(), "skipUi" to "false")
             )
         }'''
-    pos = handle.find(needle) + len(needle)
+if "val timerSeconds = parseTimerSeconds(t)" not in handle:
+    pos = handle.index(needle) + len(needle)
     handle = handle[:pos] + addition + handle[pos:]
-    s = s[:start] + handle + s[end:]
-else:
-    s = s[:start] + handle + s[end:]
+    s = s[:handle_start] + handle + s[handle_end:]
 
 P.write_text(s, encoding="utf-8")
 print("Timer upgrade generator completed safely.")
