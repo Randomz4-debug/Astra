@@ -16,17 +16,17 @@ Daemon will be stopped at the end of the build
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
 > Task :app:javaPreCompileDebug
-> Task :app:processDebugManifestForPackage
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
-> Task :app:desugarDebugFileDependencies
+> Task :app:processDebugManifestForPackage
 > Task :app:compressDebugAssets
+> Task :app:desugarDebugFileDependencies
 > Task :app:mergeDebugJniLibFolders
 > Task :app:checkDebugDuplicateClasses
-> Task :app:processDebugResources
 > Task :app:mergeDebugNativeLibs
+> Task :app:processDebugResources
 > Task :app:mergeLibDexDebug
 
 > Task :app:stripDebugDebugSymbols
@@ -37,7 +37,7 @@ Unable to strip the following libraries, packaging them as they are: libandroidx
 > Task :app:writeDebugSigningConfigVersions
 > Task :app:mergeExtDexDebug
 
-> Task :app:compileDebugKotlin FAILED
+> Task :app:compileDebugKotlin
 e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:130:64 Conflicting declarations:
 local val timerSeconds: Int?
 local val timerSeconds: Int?
@@ -57,7 +57,9 @@ e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTool
 local val timerSeconds: Int?
 local val timerSeconds: Int?
 local val timerSeconds: Int?
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789531204754.json
+
+> Task :app:compileDebugKotlin FAILED
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789531302055.json
 
 FAILURE: Build failed with an exception.
 
@@ -261,5 +263,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 48s
+BUILD FAILED in 41s
 28 actionable tasks: 28 executed
