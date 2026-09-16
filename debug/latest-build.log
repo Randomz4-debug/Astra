@@ -20,45 +20,32 @@ Daemon will be stopped at the end of the build
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
-> Task :app:desugarDebugFileDependencies
-> Task :app:compressDebugAssets
 > Task :app:processDebugManifestForPackage
-> Task :app:checkDebugDuplicateClasses
-> Task :app:mergeLibDexDebug
+> Task :app:desugarDebugFileDependencies
 > Task :app:mergeDebugJniLibFolders
+> Task :app:compressDebugAssets
+> Task :app:checkDebugDuplicateClasses
 > Task :app:processDebugResources
 > Task :app:mergeDebugNativeLibs
-> Task :app:validateSigningDebug
-> Task :app:writeDebugAppMetadata
-> Task :app:writeDebugSigningConfigVersions
+> Task :app:mergeLibDexDebug
 
 > Task :app:stripDebugDebugSymbols
 Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so, libimage_processing_util_jni.so, liblanguage_id_l2c_jni.so, libmlkit_google_ocr_pipeline.so, libmlkitcommonpipeline.so, libsurface_util_jni.so, libtranslate_jni.so.
 
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
 > Task :app:mergeExtDexDebug
 
 > Task :app:compileDebugKotlin FAILED
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:116:13 Conflicting overloads:
-fun parseTimerSeconds(input: String): Int?
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:130:13 Conflicting overloads:
-fun parseTimerSeconds(text: String): Int?
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:146:64 Conflicting declarations:
-local val timerSeconds: <ERROR TYPE REF: Ambiguity: parseTimerSeconds, [com/astra/ai/LocalCommandEngine.parseTimerSeconds, com/astra/ai/LocalCommandEngine.parseTimerSeconds]>
-local val timerSeconds: <ERROR TYPE REF: Ambiguity: parseTimerSeconds, [com/astra/ai/LocalCommandEngine.parseTimerSeconds, com/astra/ai/LocalCommandEngine.parseTimerSeconds]>
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:146:97 Unresolved reference 't'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:147:38 Unresolved reference 'lower'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:147:63 Unresolved reference 'lower'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:147:90 Unresolved reference 'lower'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:147:116 Unresolved reference 'lower'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:147:144 Unresolved reference 'lower'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:147:171 Unresolved reference 'lower'.
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:152:13 Conflicting declarations:
-local val timerSeconds: <ERROR TYPE REF: Ambiguity: parseTimerSeconds, [com/astra/ai/LocalCommandEngine.parseTimerSeconds, com/astra/ai/LocalCommandEngine.parseTimerSeconds]>
-local val timerSeconds: <ERROR TYPE REF: Ambiguity: parseTimerSeconds, [com/astra/ai/LocalCommandEngine.parseTimerSeconds, com/astra/ai/LocalCommandEngine.parseTimerSeconds]>
-e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:152:28 Overload resolution ambiguity between candidates:
-fun parseTimerSeconds(text: String): Int?
-fun parseTimerSeconds(input: String): Int?
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789530954745.json
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:130:97 Unresolved reference 't'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:131:38 Unresolved reference 'lower'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:131:63 Unresolved reference 'lower'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:131:90 Unresolved reference 'lower'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:131:116 Unresolved reference 'lower'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:131:144 Unresolved reference 'lower'.
+e: file:///home/runner/work/Astra/Astra/app/src/main/java/com/astra/ai/AstraTooling.kt:131:171 Unresolved reference 'lower'.
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1789531096509.json
 
 FAILURE: Build failed with an exception.
 
@@ -262,5 +249,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 42s
+BUILD FAILED in 51s
 28 actionable tasks: 28 executed
