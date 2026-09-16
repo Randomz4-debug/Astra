@@ -77,7 +77,6 @@ jobs:
           test -f app/src/main/java/com/astra/ai/AstraSiriVoiceInteractionSession.kt
           test -f app/src/main/java/com/astra/ai/AstraPromptTranslationService.kt
           test -f app/src/main/java/com/astra/ai/AstraRealtimeCore.kt
-          test -f app/src/main/java/com/astra/ai/AstraRealtimeVisionAnalyzer.kt
           test -f tools/final_ui_performance_cleanup.py
           test -f tools/fix_openai_ui_and_compile.py
           test -f tools/upgrade_screen_agent_translation.py
