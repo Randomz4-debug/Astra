@@ -17,9 +17,6 @@ class AstraCommandPlanner(context: Context) {
         val clean = input.trim()
         if (clean.isBlank()) return@withContext null
 
-        // A play request is a workflow: launch -> wait for the game -> inspect -> press
-        // an actually visible Start/Play/Continue/Begin control. It must never fall back
-        // to Android Settings just because the game is still loading.
         val playGame = Regex("(?is)^(?:please\\s+|could\\s+you\\s+|can\\s+you\\s+|hey\\s+astra\\s+|astra\\s+)*(?:play|start playing)\\s+(.+?)\\s*$").find(clean)
         if (playGame != null) {
             val requestedGame = playGame.groupValues[1].trim().removePrefix("the ").trim()
@@ -56,52 +53,41 @@ class AstraCommandPlanner(context: Context) {
             ?: return Result(true, toolFailure = "I could not resolve the game named $gameName.")
         if (!open.ok) return Result(true, toolFailure = open.message)
 
-        // Give Android and the game time to pass splash/loading screens before interacting.
-        delay(5000)
         val service = AstraAccessibilityService.current()
-            ?: return Result(true, toolFailure = "$gameName opened, but Astra Accessibility Access is not enabled, so I cannot inspect or press its Start button.")
+            ?: return Result(true, toolFailure = "$gameName opened, but Astra Accessibility Access is not enabled.")
 
-        var screen = service.readScreen().trim().take(24000)
-        repeat(3) {
-            if (looksLikeLoading(screen)) {
-                delay(3000)
-                screen = service.readScreen().trim().take(24000)
-            }
+        // Closed-loop protocol: observe continuously and act only after the screen becomes actionable.
+        val agent = GameInteractionAgent(service)
+        val ready = agent.waitUntilReady(60_000L)
+        var screen = ready.text
+        var pressed = agent.findAndPressStart(10)
+        if (!pressed) {
+            // OCR fallback for canvas/SurfaceView screens where accessibility exposes little text.
+            val ocr = runCatching { service.readScreenWithOcr() }.getOrDefault("")
+            if (ocr.isNotBlank()) screen = ocr.take(24000)
+            pressed = agent.findAndPressStart(6)
         }
+        screen = (service.readScreen().ifBlank { screen }).trim().take(24000)
 
-        // Only interact with an explicit visible start control. Never open Settings as fallback.
-        val startLabels = listOf("Start", "START", "Play", "PLAY", "Play Game", "Start Game", "Continue", "CONTINUE", "Begin", "BEGIN", "Start Playing", "Play Now")
-        var clicked = false
-        for (label in startLabels) {
-            if (service.clickText(label)) { clicked = true; delay(1500); break }
-        }
-        screen = service.readScreen().trim().take(24000)
-
-        val request = if (clicked) {
+        val request = if (pressed) {
             """
 The user asked: $original
-Astra opened $gameName, waited for loading to settle, observed the game, and pressed a visible Start/Play/Continue/Begin control.
-Continue only from the CURRENT SCREEN TEXT. Do not leave the game or open Android Settings unless explicitly requested. Do not claim the game is fully played unless verified.
-Do not automate actions that provide an unfair advantage in competitive multiplayer games.
+Astra opened $gameName using an adaptive observe -> wait -> detect -> act -> verify loop and found an actionable game control.
+Continue from the CURRENT SCREEN. Do not leave the game or open Android Settings unless explicitly requested. Keep observing and recover from loading/dialog/transition states rather than using fixed delays. Do not claim completion unless verified.
+Do not automate actions intended to provide an unfair advantage in competitive multiplayer games.
 CURRENT SCREEN TEXT:
 $screen
 """.trimIndent()
         } else {
             """
 The user asked: $original
-Astra opened $gameName and waited for its loading state. No obvious Start/Play/Continue/Begin control was exposed to Android Accessibility.
-Inspect the CURRENT SCREEN TEXT and report the actual state. Do NOT open Android Settings as a fallback. If it is still loading, say so. If a permission/login/update prompt is visible, identify it.
+Astra opened $gameName and used the adaptive waiting protocol for up to 60 seconds, including accessibility inspection and an OCR fallback. No confidently actionable Start/Play/Continue/Begin control was verified.
+Inspect the CURRENT SCREEN and determine the next legitimate UI/navigation action. If the game is still loading, keep waiting instead of opening Android Settings. If a permission/login/update prompt is visible, identify it and handle it only when appropriate.
 CURRENT SCREEN TEXT:
 $screen
 """.trimIndent()
         }
         return Result(true, reasoningRequest = request)
-    }
-
-    private fun looksLikeLoading(screen: String): Boolean {
-        if (screen.isBlank()) return true
-        val s = screen.lowercase()
-        return s.contains("loading") || s.contains("please wait") || s.contains("connecting") || s.contains("starting") || s.contains("initializing") || s.contains("downloading") || s.contains("checking for updates")
     }
 
     private suspend fun planReadChat(original: String, appName: String, sender: String): Result {
