@@ -31,13 +31,13 @@ if "fun longPress(x: Float" not in s:
     s = s.replace(marker, addition + marker)
 p.write_text(s, encoding="utf-8")
 
-# final_realtime_hardening.py adds an older timer parser/call after the stable
-# timer implementation. Normalize that generated block here. Do not rewrite the
-# stable DeviceTools timer or the stable class-level parser.
+# final_realtime_hardening.py still emits a legacy timer parser/call. Remove all
+# generated timer parser/call fragments and then place exactly one stable call
+# inside LocalCommandEngine.handle(), immediately after t/lower are declared.
 p = ROOT / "AstraTooling.kt"
 s = p.read_text(encoding="utf-8")
 
-# Remove the legacy parser by its unique parameter name.
+# Remove every legacy parser whose parameter is named input.
 legacy_parser = "    private fun parseTimerSeconds(input: String): Int? {"
 while legacy_parser in s:
     start = s.index(legacy_parser)
@@ -53,47 +53,130 @@ while legacy_parser in s:
                 end = i + 1
                 break
     if end is None:
-        raise SystemExit("Could not locate end of legacy timer parser")
+        raise SystemExit("Could not locate legacy timer parser end")
     s = s[:start] + s[end:].lstrip("\n")
 
-# Remove the legacy timer dispatch block emitted immediately inside handle().
-s = re.sub(
-    r'\n\s*val timerSeconds = parseTimerSeconds\(t\)\n\s*if \(timerSeconds != null && \(lower\.contains\("set"\).*?\n\s*\}\n',
-    "\n",
-    s,
-    flags=re.S,
-)
+handle_marker = "    suspend fun handle(text: String): ToolResult? {"
+if handle_marker not in s:
+    raise SystemExit("LocalCommandEngine.handle() missing")
 
-# Remove any duplicate clean timer declaration, keeping the first one.
-needle = "        val timerSeconds = parseTimerSeconds(t)"
-first = s.find(needle)
-if first >= 0:
-    second = s.find(needle, first + len(needle))
-    while second >= 0:
-        line_start = s.rfind("\n", 0, second) + 1
-        line_end = s.find("\n", second)
-        if line_end < 0:
-            line_end = len(s)
-        s = s[:line_start] + s[line_end:]
-        second = s.find(needle, first + len(needle))
+# Locate handle with brace counting.
+def function_bounds(source: str, marker: str):
+    start = source.index(marker)
+    brace = source.index("{", start)
+    depth = 0
+    for i in range(brace, len(source)):
+        if source[i] == "{":
+            depth += 1
+        elif source[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return start, i + 1
+    raise SystemExit("Could not locate handle end")
 
-# Ensure the stable timer parser and call still exist. If another upgrade stage
-# removed them, fail loudly instead of generating a broken APK.
+handle_start, handle_end = function_bounds(s, handle_marker)
+handle = s[handle_start:handle_end]
+
+# Remove every generated timer declaration and its immediately following if block
+# from the handle, regardless of the exact condition text used by old scripts.
+while "val timerSeconds = parseTimerSeconds(t)" in handle:
+    pos = handle.index("val timerSeconds = parseTimerSeconds(t)")
+    line_start = handle.rfind("\n", 0, pos) + 1
+    after_decl = handle.find("\n", pos)
+    if after_decl < 0:
+        after_decl = len(handle)
+    cursor = after_decl
+    while cursor < len(handle) and handle[cursor] in " \t\r\n":
+        cursor += 1
+    if handle.startswith("if (timerSeconds", cursor):
+        open_brace = handle.find("{", cursor)
+        if open_brace >= 0:
+            depth = 0
+            block_end = None
+            for i in range(open_brace, len(handle)):
+                if handle[i] == "{":
+                    depth += 1
+                elif handle[i] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        block_end = i + 1
+                        break
+            if block_end is None:
+                raise SystemExit("Could not locate generated timer dispatch block")
+            remove_end = block_end
+        else:
+            remove_end = after_decl
+    else:
+        remove_end = after_decl
+    handle = handle[:line_start] + handle[remove_end:]
+
+# Ensure exactly one class-level stable parser exists. Remove duplicate text-based
+# parsers before inserting one canonical copy.
+parser_sig = "    private fun parseTimerSeconds(text: String): Int? {"
+while s.count(parser_sig) > 0:
+    start = s.index(parser_sig)
+    brace = s.index("{", start)
+    depth = 0
+    end = None
+    for i in range(brace, len(s)):
+        if s[i] == "{":
+            depth += 1
+        elif s[i] == "}":
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                break
+    if end is None:
+        raise SystemExit("Could not locate timer parser end")
+    s = s[:start] + s[end:].lstrip("\n")
+
+parser = '''    private fun parseTimerSeconds(text: String): Int? {
+        val value = text.trim().lowercase()
+        if (!value.contains("timer") && !value.contains("countdown")) return null
+        val numberText = value.dropWhile { !it.isDigit() }.takeWhile { it.isDigit() || it == '.' }
+        val number = numberText.toDoubleOrNull() ?: return null
+        val seconds = when {
+            value.contains("hour") || value.contains(" hr") || value.endsWith("h") -> (number * 3600.0).toInt()
+            value.contains("minute") || value.contains(" min") || value.endsWith("m") -> (number * 60.0).toInt()
+            else -> number.toInt()
+        }
+        return seconds.takeIf { it > 0 }
+    }
+
+'''
+# Recompute handle position after parser cleanup and insert parser immediately before handle.
+handle_start = s.index(handle_marker)
+s = s[:handle_start] + parser + s[handle_start:]
+
+# Recompute handle and insert exactly one call after the t/lower declaration.
+handle_start, handle_end = function_bounds(s, handle_marker)
+handle = s[handle_start:handle_end]
+needle = "        val t = text.trim(); val lower = normalized(t)"
+if needle not in handle:
+    raise SystemExit("t/lower declaration missing inside handle")
+addition = '''
+        val timerSeconds = parseTimerSeconds(t)
+        if (timerSeconds != null) {
+            return router.execute("setTimer", mapOf("seconds" to timerSeconds.toString(), "skipUi" to "false"))
+        }'''
+pos = handle.index(needle) + len(needle)
+handle = handle[:pos] + addition + handle[pos:]
+s = s[:handle_start] + handle + s[handle_end:]
+
 required = [
     "private fun parseTimerSeconds(text: String): Int?",
     "val timerSeconds = parseTimerSeconds(t)",
     '"setTimer" -> device.timer',
     "AlarmClock.ACTION_SET_TIMER",
 ]
-missing = [x for x in required if x not in s]
-if missing:
-    raise SystemExit("Stable timer implementation missing after realtime normalization: " + ", ".join(missing))
+for needle in required:
+    if s.count(needle) == 0:
+        raise SystemExit("Stable timer implementation missing: " + needle)
 
 p.write_text(s, encoding="utf-8")
 
-# Ensure the deterministic timer verifier remains the final timer check.
 fix = Path("tools/fix_timer_compile.py")
 if fix.exists():
     exec(compile(fix.read_text(encoding="utf-8"), str(fix), "exec"), {})
 
-print("Realtime compile hardening applied; timer symbols normalized.")
+print("Realtime compile hardening applied; timer implementation normalized inside handle().")
