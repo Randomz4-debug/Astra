@@ -23,6 +23,7 @@
         <activity android:name=".AstraCameraActivity" android:exported="false" android:screenOrientation="portrait" android:label="Astra Camera"/>
         <activity android:name=".AstraCustomCommandsActivity" android:exported="false" android:label="Astra Custom Commands"/>
         <activity android:name=".AstraWebActivity" android:exported="false" android:label="Astra Web UI"/>
+        <activity android:name=".AstraWebBrowserActivity" android:exported="false" android:label="Astra Browser"/>
         <activity android:name=".MainActivity" android:exported="false" android:label="Astra Legacy"/>
         <service android:name=".AstraAccessibilityService" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" android:exported="false"><intent-filter><action android:name="android.accessibilityservice.AccessibilityService"/></intent-filter><meta-data android:name="android.accessibilityservice" android:resource="@xml/accessibility_service_config"/></service>
         <service android:name=".AstraNotificationListenerService" android:label="Astra Notification Access" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" android:exported="true"><intent-filter><action android:name="android.service.notification.NotificationListenerService"/></intent-filter></service>
